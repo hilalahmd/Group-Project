@@ -1,0 +1,192 @@
+"use client";
+
+import React, { useState, ChangeEvent, FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import api from "@/lib/api";
+
+// TypeScript interface matching req.body payload structure
+interface AuthFormData {
+  displayName: string;
+  username: string;
+  email: string;
+  password: string;
+}
+
+export default function Page(): React.JSX.Element {
+  const router = useRouter();
+  const [formData, setFormData] = useState<AuthFormData>({
+    displayName: "",
+    username: "",
+    email: "",
+    password: "",
+  });
+
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>): void => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      // Send payload to backend
+      const res = await api.post("/api/auth/register", formData);
+      setSuccess("Account created successfully! Redirecting to login...");
+      
+      // Redirect to login page after 1.5 seconds
+      setTimeout(() => {
+        router.push("/login");
+      }, 1500);
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Registration failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 p-4">
+      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/10 p-8 shadow-2xl backdrop-blur-xl dark:bg-zinc-950/50">
+        
+        {/* Header / Branding */}
+        <div className="mb-6 text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/30">
+            <span className="text-sm font-bold text-white tracking-wider">KANBA</span>
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-white">Create an account</h1>
+          <p className="mt-1 text-sm text-slate-400">Sign up to your workspace</p>
+        </div>
+
+        {/* Error Alert */}
+        {error && (
+          <div className="mb-4 rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-xs text-red-400 text-center font-medium">
+            {error}
+          </div>
+        )}
+
+        {/* Success Alert */}
+        {success && (
+          <div className="mb-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3 text-xs text-emerald-400 text-center font-medium">
+            {success}
+          </div>
+        )}
+
+        {/* Form Controls */}
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          {/* Display Name */}
+          <div>
+            <label className="block text-xs font-medium text-slate-200 mb-1.5">
+              Display Name
+            </label>
+            <input
+              type="text"
+              name="displayName"
+              value={formData.displayName}
+              onChange={handleChange}
+              placeholder="Jane Doe"
+              required
+              className="w-full rounded-lg border border-white/10 bg-black/20 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 transition-all focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+
+          {/* Username */}
+          <div>
+            <label className="block text-xs font-medium text-slate-200 mb-1.5">
+              Username
+            </label>
+            <input
+              type="text"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              placeholder="janedoe"
+              required
+              className="w-full rounded-lg border border-white/10 bg-black/20 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 transition-all focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+
+          {/* Email */}
+          <div>
+            <label className="block text-xs font-medium text-slate-200 mb-1.5">
+              Email address
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="jane@acme.dev"
+              required
+              className="w-full rounded-lg border border-white/10 bg-black/20 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 transition-all focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+
+          {/* Password */}
+          <div>
+            <label className="block text-xs font-medium text-slate-200 mb-1.5">
+              Password
+            </label>
+            <input
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="••••••••"
+              required
+              className="w-full rounded-lg border border-white/10 bg-black/20 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 transition-all focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:from-indigo-500 hover:to-purple-500 active:scale-[0.98] disabled:opacity-50"
+          >
+            {loading ? "Creating account..." : "Create Account"}
+          </button>
+        </form>
+
+        {/* Divider */}
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-white/10"></div>
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-slate-900/80 px-2 text-slate-400">Or continue with</span>
+          </div>
+        </div>
+
+        {/* OAuth Buttons */}
+        <div className="grid grid-cols-2 gap-3">
+          <button type="button" className="flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10">
+            <i className="fa-brands fa-microsoft text-blue-600"></i>
+            <span>Microsoft</span>
+          </button>
+          <button type="button" className="flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10">
+            <i className="fa-brands fa-google text-[#4285F4]"></i>
+            <span>Google</span>
+          </button>
+        </div>
+
+        {/* Footer Link */}
+        <p className="mt-6 text-center text-xs text-slate-400">
+          Already have an account?{" "}
+          <a href="/login" className="font-semibold text-indigo-400 hover:text-indigo-300">
+            Sign in
+          </a>
+        </p>
+      </div>
+    </div>
+  );
+}

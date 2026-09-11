@@ -7,11 +7,23 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-for-dev'; // Namm
 
 // 1. Register Logic
 export const registerUser = async (email: string, username: string, passwordPlain: string, displayName: string) => {
-  // Aadyam password hash cheyyuka (PDF-il paranja pole cost 12 aanu)
+  // Check if email already exists
+  const existingEmail = await prisma.user.findUnique({ where: { email } });
+  if (existingEmail) {
+    throw new Error('Email is already registered');
+  }
+
+  // Check if username already exists
+  const existingUsername = await prisma.user.findUnique({ where: { username } });
+  if (existingUsername) {
+    throw new Error('Username is already taken');
+  }
+
+  // Password hashing with salt 12
   const saltRounds = 12;
   const passwordHash = await bcrypt.hash(passwordPlain, saltRounds);
 
-  // Database-il puthiya user-ne save cheyyuka
+  // Save new user to database
   const newUser = await prisma.user.create({
     data: {
       email,

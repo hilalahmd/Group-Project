@@ -1,7 +1,21 @@
-import app from './app';
+import 'dotenv/config';
+import app from './app.js';
+import { PrismaClient } from '@prisma/client';
 
-const PORT = process.env.PORT || 3000;
+const prisma = new PrismaClient();
+const PORT = process.env.PORT || 5000;
 
-app.listen(PORT,()=>{
-    console.log(`server is running beutifully on http://localhost:${PORT}`)
-})
+async function startServer() {
+  try {
+    await prisma.$connect();
+    console.log(' Database connected successfully! (PostgreSQL)');
+  } catch (error) {
+    console.error(' Database connection error:', error);
+  }
+
+  app.listen(PORT, () => {
+    console.log(`server is running beutifully on http://localhost:${PORT}`);
+  });
+}
+
+startServer();
