@@ -36,3 +36,9 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# IDE / Editor settings
+.vscode/settings.json
+.vscode/*
+!.vscode/settings.json.template
+
