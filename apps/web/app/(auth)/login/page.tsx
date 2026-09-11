@@ -2,7 +2,7 @@
 
 import React, { useState, ChangeEvent, FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import axios from "axios";
+import api from "@/lib/api";
 
 // Interface for login credentials
 interface LoginFormData {
@@ -38,7 +38,7 @@ export default function LoginPage(): React.JSX.Element {
     setSuccess(null);
 
     try {
-      const response = await axios.post("http://localhost:5000/api/auth/login", formData);
+      const response = await api.post("/api/auth/login", formData);
       
       // Store token and user details in localStorage
       if (response.data.token) {
@@ -64,7 +64,7 @@ export default function LoginPage(): React.JSX.Element {
         {/* Header / Branding */}
         <div className="mb-8 text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/30">
-            <span className="text-xl font-bold text-white">KANBA</span>
+            <span className="text-sm font-bold text-white tracking-wider">KANBA</span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-white">Welcome back</h1>
           <p className="mt-1 text-sm text-slate-400">Sign in to your FlowBoard workspace</p>

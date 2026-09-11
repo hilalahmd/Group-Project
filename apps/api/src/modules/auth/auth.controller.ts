@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import * as AuthService from './auth.service';
+import * as AuthService from './auth.service.js';
 
 // 1. Register User
 export const register = async (req: Request, res: Response): Promise<void> => {
