@@ -3,6 +3,7 @@
 import React, { useState, ChangeEvent, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
+import { authClient } from "@/lib/auth-client";
 
 // Interface for login credentials
 interface LoginFormData {
@@ -38,20 +39,27 @@ export default function LoginPage(): React.JSX.Element {
     setSuccess(null);
 
     try {
-      const response = await api.post("/api/auth/login", formData);
+      // better-auth vazhi login request ayakkunnu
+      const { data, error } = await authClient.signIn.email({
+          email: formData.email,
+          password: formData.password,
+      });
       
-      // Store token and user details in localStorage
-      if (response.data.token) {
-        localStorage.setItem("token", response.data.token);
-        localStorage.setItem("user", JSON.stringify(response.data.user));
+      // Backend-il ninnu thettanennu error vannal
+      if (error) {
+          setError(error.message || "Invalid email or password");
+          setLoading(false);
+          return;
       }
 
+      // Success aayal
       setSuccess("Logged in successfully! Redirecting...");
       setTimeout(() => {
         router.push("/");
       }, 1000);
+      
     } catch (err: any) {
-      setError(err.response?.data?.message || "Invalid email or password");
+      setError("An unexpected error occurred");
     } finally {
       setLoading(false);
     }
@@ -166,6 +174,12 @@ export default function LoginPage(): React.JSX.Element {
           </button>
           <button 
             type="button" 
+            onClick={async () => {
+              await authClient.signIn.social({
+                provider: "google",
+                callbackURL: "http://localhost:3000/"
+              });
+            }}
             className="flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
           >
             <i className="fa-brands fa-google text-[#4285F4]"></i>

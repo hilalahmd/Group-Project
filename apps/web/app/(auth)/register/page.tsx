@@ -2,7 +2,7 @@
 
 import React, { useState, ChangeEvent, FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import api from "@/lib/api";
+import { authClient } from "@/lib/auth-client";
 
 // TypeScript interface matching req.body payload structure
 interface AuthFormData {
@@ -40,8 +40,19 @@ export default function Page(): React.JSX.Element {
     setSuccess(null);
 
     try {
-      // Send payload to backend
-      const res = await api.post("/api/auth/register", formData);
+      // better-auth vazhi registration
+      const { data, error } = await authClient.signUp.email({
+          email: formData.email,
+          password: formData.password,
+          name: formData.displayName,
+      });
+
+      if (error) {
+          setError(error.message || "Registration failed.");
+          setLoading(false);
+          return;
+      }
+      
       setSuccess("Account created successfully! Redirecting to login...");
       
       // Redirect to login page after 1.5 seconds
@@ -49,7 +60,7 @@ export default function Page(): React.JSX.Element {
         router.push("/login");
       }, 1500);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Registration failed. Please try again.");
+      setError("An unexpected error occurred");
     } finally {
       setLoading(false);
     }
@@ -173,7 +184,16 @@ export default function Page(): React.JSX.Element {
             <i className="fa-brands fa-microsoft text-blue-600"></i>
             <span>Microsoft</span>
           </button>
-          <button type="button" className="flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10">
+          <button 
+            type="button" 
+            onClick={async () => {
+              await authClient.signIn.social({
+                provider: "google",
+                callbackURL: "http://localhost:3000/"
+              });
+            }}
+            className="flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
+          >
             <i className="fa-brands fa-google text-[#4285F4]"></i>
             <span>Google</span>
           </button>

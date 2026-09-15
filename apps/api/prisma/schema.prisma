@@ -1,18 +1,28 @@
+
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [citext]
 }
 
 // 1. Users
+
 model User {
   id           BigInt    @id @default(autoincrement())
   email        String    @unique @db.Citext
-  username     String    @unique @db.Citext
-  displayName  String    @map("display_name")
+  username     String?   @unique @db.Citext
+  displayName  String?   @map("display_name")
+  name          String
+  emailVerified Boolean   @default(false)
+  image         String?
+  sessions      Session[]
+  accounts      Account[]
   avatarUrl    String?   @map("avatar_url")
   passwordHash String?   @map("password_hash")
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
@@ -30,6 +40,7 @@ model User {
 }
 
 // 2. Workspaces
+
 model Workspace {
   id        BigInt   @id @default(autoincrement())
   name      String
@@ -46,6 +57,7 @@ model Workspace {
 }
 
 // 3. Workspace Members
+
 model WorkspaceMember {
   workspaceId BigInt   @map("workspace_id")
   userId      BigInt   @map("user_id")
@@ -60,6 +72,7 @@ model WorkspaceMember {
 }
 
 // 4. Boards
+
 model Board {
   id          BigInt    @id @default(autoincrement())
   workspaceId BigInt    @map("workspace_id")
@@ -81,6 +94,7 @@ model Board {
 }
 
 // 5. Board Members
+
 model BoardMember {
   boardId  BigInt   @map("board_id")
   userId   BigInt   @map("user_id")
@@ -95,6 +109,7 @@ model BoardMember {
 }
 
 // 6. Lists
+
 model List {
   id         BigInt    @id @default(autoincrement())
   boardId    BigInt    @map("board_id")
@@ -111,6 +126,7 @@ model List {
 }
 
 // 7. Cards
+
 model Card {
   id          BigInt    @id @default(autoincrement())
   listId      BigInt    @map("list_id")
@@ -132,6 +148,7 @@ model Card {
 }
 
 // 8. Card Members
+
 model CardMember {
   cardId     BigInt   @map("card_id")
   userId     BigInt   @map("user_id")
@@ -142,4 +159,52 @@ model CardMember {
 
   @@id([cardId, userId])
   @@map("card_members")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    BigInt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(uuid())
+  accountId             String
+  providerId            String
+  userId                BigInt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(uuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
 }
