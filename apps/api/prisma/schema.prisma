@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. Users
+model User {
+  id           BigInt    @id @default(autoincrement())
+  email        String    @unique @db.Citext
+  username     String    @unique @db.Citext
+  displayName  String    @map("display_name")
+  avatarUrl    String?   @map("avatar_url")
+  passwordHash String?   @map("password_hash")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
+
+  workspaceMembers WorkspaceMember[]
+  boardMembers     BoardMember[]
+  createdBoards    Board[]           @relation("BoardCreator")
+  createdCards     Card[]            @relation("CardCreator")
+  cardMembers      CardMember[]
+  Workspace        Workspace[]
+
+  @@map("users")
+}
+
+// 2. Workspaces
+model Workspace {
+  id        BigInt   @id @default(autoincrement())
+  name      String
+  slug      String   @unique @db.Citext
+  ownerId   BigInt   @map("owner_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  owner   User              @relation(fields: [ownerId], references: [id])
+  members WorkspaceMember[]
+  boards  Board[]
+
+  @@map("workspaces")
+}
+
+// 3. Workspace Members
+model WorkspaceMember {
+  workspaceId BigInt   @map("workspace_id")
+  userId      BigInt   @map("user_id")
+  role        String // 'owner', 'admin', 'member'
+  joinedAt    DateTime @default(now()) @map("joined_at") @db.Timestamptz
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([workspaceId, userId])
+  @@map("workspace_members")
+}
+
+// 4. Boards
+model Board {
+  id          BigInt    @id @default(autoincrement())
+  workspaceId BigInt    @map("workspace_id")
+  name        String
+  slug        String
+  description String?
+  visibility  String // 'workspace', 'private', 'public'
+  createdById BigInt    @map("created_by")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  archivedAt  DateTime? @map("archived_at") @db.Timestamptz
+
+  workspace Workspace     @relation(fields: [workspaceId], references: [id])
+  creator   User          @relation("BoardCreator", fields: [createdById], references: [id])
+  members   BoardMember[]
+  lists     List[]
+
+  @@map("boards")
+}
+
+// 5. Board Members
+model BoardMember {
+  boardId  BigInt   @map("board_id")
+  userId   BigInt   @map("user_id")
+  role     String // 'admin', 'member'
+  joinedAt DateTime @default(now()) @map("joined_at") @db.Timestamptz
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([boardId, userId])
+  @@map("board_members")
+}
+
+// 6. Lists
+model List {
+  id         BigInt    @id @default(autoincrement())
+  boardId    BigInt    @map("board_id")
+  name       String
+  position   Decimal   @db.Decimal(30, 15)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  archivedAt DateTime? @map("archived_at") @db.Timestamptz
+
+  board Board  @relation(fields: [boardId], references: [id])
+  cards Card[]
+
+  @@map("lists")
+}
+
+// 7. Cards
+model Card {
+  id          BigInt    @id @default(autoincrement())
+  listId      BigInt    @map("list_id")
+  createdById BigInt    @map("created_by")
+  title       String
+  description String?
+  position    Decimal   @db.Decimal(30, 15)
+  dueAt       DateTime? @map("due_at") @db.Timestamptz
+  completedAt DateTime? @map("completed_at") @db.Timestamptz
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  archivedAt  DateTime? @map("archived_at") @db.Timestamptz
+
+  list    List         @relation(fields: [listId], references: [id])
+  creator User         @relation("CardCreator", fields: [createdById], references: [id])
+  members CardMember[]
+
+  @@map("cards")
+}
+
+// 8. Card Members
+model CardMember {
+  cardId     BigInt   @map("card_id")
+  userId     BigInt   @map("user_id")
+  assignedAt DateTime @default(now()) @map("assigned_at") @db.Timestamptz
+
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([cardId, userId])
+  @@map("card_members")
+}
