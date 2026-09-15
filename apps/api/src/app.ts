@@ -1,6 +1,9 @@
 import express from "express"
 import cors from 'cors'
-import authRoutes from './modules/auth/auth.routes.js'
+import { toNodeHandler } from "better-auth/node";
+import { auth } from "./modules/auth/auth.config.js";
+import morgan from 'morgan';
+
 
 // Handle BigInt serialization in JSON response
 (BigInt.prototype as any).toJSON = function () {
@@ -12,6 +15,8 @@ const app = express();
 // middlewares 
 
 app.use(cors());
+app.use(morgan('dev'));
+
 app.use(express.json());  // to parse json bodies
 
 // health check route (server work akkununundo enn test cheyaann)
@@ -22,7 +27,11 @@ app.get('/healthz',(req,res)=>{
     })
 })
 
-app.use('/api/auth', authRoutes)
+app.use("/api/auth", toNodeHandler(auth));
+
+
+
+
 
 
 export default app;
