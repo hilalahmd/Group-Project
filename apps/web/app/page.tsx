@@ -53,6 +53,31 @@ export default function Home() {
         </section>
       </main>
 
+    <section className="py-16 px-4">
+  <div className="text-center max-w-2xl mx-auto">
+    {/* Heading with Taskio */}
+    <h1 className="text-3xl font-semibold text-gray-800 mb-6">
+      Get started with <span className="text-gray-900 font-bold">Taskio</span> today
+    </h1>
+
+    {/* Form Container */}
+    <div className="flex flex-col sm:flex-row items-center gap-3 bg-gray-100 p-6 rounded-xl border border-gray-200 shadow-sm max-w-md mx-auto">
+      <input 
+        type="email" 
+        placeholder="Enter your email" 
+        className="w-full px-4 py-2 bg-white text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent placeholder-gray-400"
+        required
+      />
+      
+      <button 
+        type="submit" 
+        className="w-full sm:w-auto px-6 py-2 bg-gray-700 hover:bg-gray-800 text-white font-medium rounded-lg transition duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+        Subscribe
+      </button>
+    </div>
+  </div>
+</section>
+
       <footer className="border-t border-slate-200 bg-white py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm text-slate-500">
           <p>&copy; {new Date().getFullYear()} FlowBoard. All rights reserved.</p>
