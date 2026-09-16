@@ -10,6 +10,12 @@ export default function Home() {
           </div>
           <nav className="flex items-center gap-4">
             <Link
+              href="/boards"
+              className="text-sm font-semibold text-white bg-black px-4 py-2 rounded-lg hover:bg-zinc-800 transition-colors shadow-sm"
+            >
+              📋 Boards & Templates
+            </Link>
+            <Link
               href="/login"
               className="text-sm font-medium text-slate-700 hover:text-indigo-600 transition-colors"
             >
@@ -38,16 +44,16 @@ export default function Home() {
           </p>
           <div className="flex justify-center gap-4 pt-4">
             <Link
+              href="/boards"
+              className="rounded-lg bg-black px-6 py-3 text-base font-bold text-white shadow-lg hover:bg-zinc-800 transition-all flex items-center gap-2"
+            >
+              📋 Open Boards & Templates Hub
+            </Link>
+            <Link
               href="/register"
               className="rounded-md bg-indigo-600 px-6 py-3 text-base font-medium text-white shadow hover:bg-indigo-700 transition-colors"
             >
               Start Free Trial
-            </Link>
-            <Link
-              href="/login"
-              className="rounded-md border border-slate-300 bg-white px-6 py-3 text-base font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition-colors"
-            >
-              Sign In
             </Link>
           </div>
         </section>

@@ -75,17 +75,22 @@ model WorkspaceMember {
 
 model Board {
   id          BigInt    @id @default(autoincrement())
-  workspaceId BigInt    @map("workspace_id")
+  workspaceId BigInt?   @map("workspace_id")
   name        String
   slug        String
   description String?
-  visibility  String // 'workspace', 'private', 'public'
+  visibility  String    // 'workspace', 'private', 'public'
+  isTemplate  Boolean   @default(false) @map("is_template")
+  category    String?
+  coverColor  String?   @map("cover_color")
+  coverImage  String?   @map("cover_image")
+  usedCount   Int       @default(0) @map("used_count")
   createdById BigInt    @map("created_by")
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   archivedAt  DateTime? @map("archived_at") @db.Timestamptz
 
-  workspace Workspace     @relation(fields: [workspaceId], references: [id])
+  workspace Workspace?    @relation(fields: [workspaceId], references: [id])
   creator   User          @relation("BoardCreator", fields: [createdById], references: [id])
   members   BoardMember[]
   lists     List[]

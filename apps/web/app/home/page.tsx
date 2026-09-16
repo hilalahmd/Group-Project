@@ -1,179 +1,484 @@
-"use client"
-import React, { useState } from 'react';
 
-// Define TypeScript interfaces for the Kanban board data
-interface Task {
-  id: string;
-  tag: string;
-  tagColor: string;
+"use client";
+
+import { useState } from "react";
+
+type Board = {
+  id: number;
   title: string;
-  dueDate: string;
-  assignee: string;
-  assigneeBg: string;
-  completed?: boolean;
-}
+  workspace: string;
+  color: string;
+  starred?: boolean;
+};
 
-interface Column {
-  id: string;
-  title: string;
-  dotColor: string;
-  tasks: Task[];
-}
+const recentBoards: Board[] = [
+  {
+    id: 1,
+    title: "Flowboard Development",
+    workspace: "Flowboard Team",
+    color: "bg-blue-600",
+    starred: true,
+  },
+  {
+    id: 2,
+    title: "Website Development",
+    workspace: "Development",
+    color: "bg-purple-600",
+  },
+  {
+    id: 3,
+    title: "E-Commerce Project",
+    workspace: "Flowboard Team",
+    color: "bg-green-600",
+  },
+  {
+    id: 4,
+    title: "Marketing Planning",
+    workspace: "Marketing",
+    color: "bg-orange-500",
+  },
+];
 
-export default function Page() {
-  // Initial board state using TypeScript types
-  const [columns, setColumns] = useState<Column[]>([
-    {
-      id: 'todo',
-      title: 'To Do',
-      dotColor: 'bg-amber-500',
-      tasks: [
-        {
-          id: 't1',
-          tag: 'High Priority',
-          tagColor: 'bg-red-100 text-red-700',
-          title: 'Redesign landing page hero section',
-          dueDate: 'Due Tomorrow',
-          assignee: 'AS',
-          assigneeBg: 'bg-blue-100 text-blue-700',
-        },
-        {
-          id: 't2',
-          tag: 'Feature',
-          tagColor: 'bg-blue-100 text-blue-700',
-          title: 'Implement user authentication flow',
-          dueDate: 'Due Oct 12',
-          assignee: 'JD',
-          assigneeBg: 'bg-gray-200 text-gray-700',
-        },
-      ],
-    },
-    {
-      id: 'in-progress',
-      title: 'In Progress',
-      dotColor: 'bg-blue-500',
-      tasks: [
-        {
-          id: 't3',
-          tag: 'Development',
-          tagColor: 'bg-emerald-100 text-emerald-700',
-          title: 'Tailwind CSS layout restructuring',
-          dueDate: 'Today',
-          assignee: 'MK',
-          assigneeBg: 'bg-purple-100 text-purple-700',
-        },
-      ],
-    },
-    {
-      id: 'done',
-      title: 'Done',
-      dotColor: 'bg-emerald-500',
-      tasks: [
-        {
-          id: 't4',
-          tag: 'Setup',
-          tagColor: 'bg-gray-100 text-gray-600',
-          title: 'Initialize project repository',
-          dueDate: 'Completed',
-          assignee: 'JD',
-          assigneeBg: 'bg-gray-200 text-gray-700',
-          completed: true,
-        },
-      ],
-    },
-  ]);
+const starredBoards = recentBoards.filter((board) => board.starred);
 
-  const [searchQuery, setSearchQuery] = useState<string>('');
+export default function HomePage() {
+  const [showCreateBoard, setShowCreateBoard] = useState(false);
+  const [boardName, setBoardName] = useState("");
+
+  const createBoard = () => {
+    if (!boardName.trim()) return;
+
+    console.log("Creating board:", boardName);
+
+    setBoardName("");
+    setShowCreateBoard(false);
+  };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100 font-sans">
-      
-      {/* 1. Top Navigation Bar */}
-      <header className="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-200 shadow-sm shrink-0">
-        <div className="flex items-center gap-4">
-          <h1 className="text-xl font-bold text-gray-800">
-            Taskio <span className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded-md font-normal">Board</span>
-          </h1>
-          <span className="text-gray-300">|</span>
-          <button className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition">
-            Workspace
-          </button>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <input 
-            type="text" 
-            placeholder="Search cards..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="px-3 py-1.5 text-sm bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
-          />
-          <div className="w-8 h-8 bg-gray-700 text-white font-semibold rounded-full flex items-center justify-center text-sm">
-            JD
+    <div className="min-h-screen bg-gray-50 text-gray-900">
+
+      {/* ================= NAVBAR ================= */}
+
+      <header className="sticky top-0 z-40 flex h-16 items-center border-b bg-white px-4 shadow-sm md:px-6">
+
+        {/* Logo */}
+        <div className="flex items-center gap-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 font-bold text-white">
+            F
           </div>
+
+          <span className="text-xl font-bold">
+            Flowboard
+          </span>
+        </div>
+
+        {/* Navigation */}
+        <nav className="ml-8 hidden items-center gap-6 md:flex">
+          <a
+            href="#"
+            className="text-sm font-medium text-gray-700 hover:text-blue-600"
+          >
+            Workspaces
+          </a>
+
+          <a
+            href="#"
+            className="text-sm font-medium text-gray-700 hover:text-blue-600"
+          >
+            Recent
+          </a>
+
+          <a
+            href="#"
+            className="text-sm font-medium text-gray-700 hover:text-blue-600"
+          >
+            Starred
+          </a>
+        </nav>
+
+        {/* Right side */}
+        <div className="ml-auto flex items-center gap-3">
+
+          {/* Search */}
+          <div className="hidden lg:block">
+            <input
+              type="text"
+              placeholder="Search boards..."
+              className="w-56 rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+          </div>
+
+          {/* Notification */}
+          <button
+            className="rounded-lg p-2 text-gray-600 hover:bg-gray-100"
+            aria-label="Notifications"
+          >
+            🔔
+          </button>
+
+          {/* Avatar */}
+          <button className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 font-semibold text-blue-600">
+            Y
+          </button>
         </div>
       </header>
 
-      {/* 2. Main Kanban Board Container */}
-      <main className="flex-1 overflow-x-auto p-6">
-        <div className="flex items-start gap-6 h-full min-w-max">
-          
-          {columns.map((column) => (
-            <div 
-              key={column.id} 
-              className="w-80 bg-gray-200/60 rounded-xl p-4 flex flex-col max-h-full border border-gray-300/60"
-            >
-              {/* Column Header */}
-              <div className="flex items-center justify-between mb-3 px-1">
-                <h2 className="font-semibold text-gray-700 text-sm flex items-center gap-2">
-                  <span className={`w-2.5 h-2.5 rounded-full ${column.dotColor}`}></span>
-                  {column.title} 
-                  <span className="text-gray-400 text-xs font-normal">{column.tasks.length}</span>
-                </h2>
-                <button className="text-gray-500 hover:text-gray-800 font-bold text-lg cursor-pointer">
-                  +
-                </button>
-              </div>
+      {/* ================= PAGE ================= */}
 
-              {/* Cards List */}
-              <div className="flex flex-col gap-3 overflow-y-auto pr-1">
-                {column.tasks.map((task) => (
-                  <div 
-                    key={task.id}
-                    className={`bg-white p-3.5 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition cursor-pointer ${
-                      task.completed ? 'opacity-75' : ''
-                    }`}
-                  >
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded uppercase tracking-wider ${task.tagColor}`}>
-                      {task.tag}
-                    </span>
-                    <p className={`text-sm font-medium text-gray-800 mt-2 ${task.completed ? 'line-through' : ''}`}>
-                      {task.title}
-                    </p>
-                    <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-100 text-xs text-gray-500">
-                      <span>{task.dueDate}</span>
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] ${task.assigneeBg}`}>
-                        {task.assignee}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+      <main className="mx-auto max-w-7xl px-4 py-8 md:px-8">
 
-              {/* Add a card footer button */}
-              <button className="mt-3 w-full py-2 text-sm text-gray-600 hover:bg-gray-300/50 rounded-lg text-left px-2 transition font-medium">
-                + Add a card
-              </button>
+        {/* ================= WELCOME ================= */}
+
+        <section className="mb-10">
+
+          <h1 className="text-3xl font-bold">
+            Welcome back, Yadu 👋
+          </h1>
+
+          <p className="mt-2 text-gray-500">
+            Pick up where you left off.
+          </p>
+
+        </section>
+
+        {/* ================= RECENT BOARDS ================= */}
+
+        <section className="mb-12">
+
+          <div className="mb-5 flex items-center justify-between">
+
+            <div>
+              <h2 className="text-xl font-bold">
+                Recently viewed
+              </h2>
+
+              <p className="mt-1 text-sm text-gray-500">
+                Boards you've recently worked on
+              </p>
             </div>
-          ))}
 
-          {/* Add Another List Column Button */}
-          <div className="w-80 bg-gray-200/30 hover:bg-gray-200/50 border-2 border-dashed border-gray-300 rounded-xl p-4 flex items-center justify-center cursor-pointer transition h-20 text-gray-600 font-medium text-sm">
-            + Add another list
+            <button
+              onClick={() => setShowCreateBoard(true)}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+            >
+              + Create
+            </button>
+
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+
+            {recentBoards.map((board) => (
+
+              <button
+                key={board.id}
+                className="group overflow-hidden rounded-xl border bg-white text-left shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+              >
+
+                {/* Board Cover */}
+                <div
+                  className={`h-24 ${board.color} p-4`}
+                >
+                  {board.starred && (
+                    <span className="rounded bg-white/20 px-2 py-1 text-sm text-white">
+                      ★
+                    </span>
+                  )}
+                </div>
+
+                {/* Board Information */}
+                <div className="p-4">
+
+                  <h3 className="font-semibold transition group-hover:text-blue-600">
+                    {board.title}
+                  </h3>
+
+                  <p className="mt-1 text-xs text-gray-500">
+                    {board.workspace}
+                  </p>
+
+                </div>
+
+              </button>
+
+            ))}
+
+          </div>
+
+        </section>
+
+        {/* ================= STARRED ================= */}
+
+        <section className="mb-12">
+
+          <div className="mb-5">
+
+            <h2 className="text-xl font-bold">
+              Starred boards
+            </h2>
+
+            <p className="mt-1 text-sm text-gray-500">
+              Your favorite boards
+            </p>
+
+          </div>
+
+          <div className="overflow-hidden rounded-xl border bg-white">
+
+            {starredBoards.length > 0 ? (
+
+              starredBoards.map((board) => (
+
+                <button
+                  key={board.id}
+                  className="flex w-full items-center gap-4 border-b p-4 text-left last:border-b-0 hover:bg-gray-50"
+                >
+
+                  <div
+                    className={`h-12 w-12 rounded-lg ${board.color}`}
+                  />
+
+                  <div className="flex-1">
+
+                    <h3 className="font-medium">
+                      {board.title}
+                    </h3>
+
+                    <p className="text-sm text-gray-500">
+                      {board.workspace}
+                    </p>
+
+                  </div>
+
+                  <span className="text-xl text-yellow-500">
+                    ★
+                  </span>
+
+                </button>
+
+              ))
+
+            ) : (
+
+              <div className="p-8 text-center">
+
+                <div className="mb-3 text-3xl">
+                  ☆
+                </div>
+
+                <p className="font-medium">
+                  No starred boards
+                </p>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  Star a board to find it quickly here.
+                </p>
+
+              </div>
+
+            )}
+
+          </div>
+
+        </section>
+
+        {/* ================= WORKSPACES ================= */}
+
+        <section>
+
+          <div className="mb-5">
+
+            <h2 className="text-xl font-bold">
+              Your workspaces
+            </h2>
+
+            <p className="mt-1 text-sm text-gray-500">
+              Boards organized by workspace
+            </p>
+
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-2">
+
+            {/* Workspace 1 */}
+            <div className="rounded-xl border bg-white p-5">
+
+              <div className="mb-5 flex items-center gap-3">
+
+                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-100 font-bold text-blue-600">
+                  F
+                </div>
+
+                <div>
+
+                  <h3 className="font-semibold">
+                    Flowboard Team
+                  </h3>
+
+                  <p className="text-sm text-gray-500">
+                    5 members · 3 boards
+                  </p>
+
+                </div>
+
+              </div>
+
+              <div className="space-y-2">
+
+                <button className="flex w-full items-center justify-between rounded-lg p-3 text-left hover:bg-gray-50">
+
+                  <span className="text-sm">
+                    📋 Flowboard Development
+                  </span>
+
+                  <span className="text-gray-400">
+                    →
+                  </span>
+
+                </button>
+
+                <button className="flex w-full items-center justify-between rounded-lg p-3 text-left hover:bg-gray-50">
+
+                  <span className="text-sm">
+                    📋 E-Commerce Project
+                  </span>
+
+                  <span className="text-gray-400">
+                    →
+                  </span>
+
+                </button>
+
+              </div>
+
+              <button className="mt-4 w-full rounded-lg border border-dashed px-4 py-2 text-sm font-medium text-gray-600 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-600">
+                + Create board
+              </button>
+
+            </div>
+
+            {/* Workspace 2 */}
+            <div className="rounded-xl border bg-white p-5">
+
+              <div className="mb-5 flex items-center gap-3">
+
+                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-purple-100 font-bold text-purple-600">
+                  D
+                </div>
+
+                <div>
+
+                  <h3 className="font-semibold">
+                    Development
+                  </h3>
+
+                  <p className="text-sm text-gray-500">
+                    3 members · 2 boards
+                  </p>
+
+                </div>
+
+              </div>
+
+              <div className="space-y-2">
+
+                <button className="flex w-full items-center justify-between rounded-lg p-3 text-left hover:bg-gray-50">
+
+                  <span className="text-sm">
+                    📋 Website Development
+                  </span>
+
+                  <span className="text-gray-400">
+                    →
+                  </span>
+
+                </button>
+
+                <button className="flex w-full items-center justify-between rounded-lg p-3 text-left hover:bg-gray-50">
+
+                  <span className="text-sm">
+                    📋 Backend API
+                  </span>
+
+                  <span className="text-gray-400">
+                    →
+                  </span>
+
+                </button>
+
+              </div>
+
+              <button className="mt-4 w-full rounded-lg border border-dashed px-4 py-2 text-sm font-medium text-gray-600 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-600">
+                + Create board
+              </button>
+
+            </div>
+
+          </div>
+
+        </section>
+
+      </main>
+
+      {/* ================= CREATE BOARD MODAL ================= */}
+
+      {showCreateBoard && (
+
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+
+            <div className="mb-5 flex items-center justify-between">
+
+              <h2 className="text-xl font-bold">
+                Create board
+              </h2>
+
+              <button
+                onClick={() => setShowCreateBoard(false)}
+                className="text-xl text-gray-400 hover:text-gray-700"
+              >
+                ×
+              </button>
+
+            </div>
+
+            <label className="mb-2 block text-sm font-medium">
+              Board name
+            </label>
+
+            <input
+              value={boardName}
+              onChange={(e) => setBoardName(e.target.value)}
+              placeholder="e.g. Website Development"
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+
+            <div className="mt-6 flex justify-end gap-3">
+
+              <button
+                onClick={() => setShowCreateBoard(false)}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={createBoard}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+              >
+                Create board
+              </button>
+
+            </div>
+
           </div>
 
         </div>
-      </main>
+
+      )}
+
     </div>
   );
 }
+
