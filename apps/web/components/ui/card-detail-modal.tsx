@@ -1,10 +1,20 @@
 import * as React from "react";
 import { Modal } from "@/components/ui/modal";
-import { Card as CardType, Label, Checklist, ChecklistItem, Comment, Attachment } from "@/lib/mock-data";
+import { Card as CardType, Label, Checklist, ChecklistItem, Comment, Attachment, MOCK_USERS, User } from "@/lib/mock-data";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AlignLeft, CheckSquare, Clock, MessageSquare, Paperclip, Plus, Tag, Users } from "lucide-react";
+
+const UNKNOWN_USER: Pick<User, "name" | "initials"> = {
+  name: "Unknown User",
+  initials: "?",
+};
+
+function getUserById(userId: string): Pick<User, "name" | "initials"> {
+  const user = MOCK_USERS.find((u) => u.id === userId);
+  return user ?? UNKNOWN_USER;
+}
 
 interface CardDetailModalProps {
   isOpen: boolean;
@@ -94,39 +104,45 @@ export function CardDetailModal({ isOpen, onClose, card }: CardDetailModalProps)
             </div>
 
             {/* Checklists */}
-            {card.checklists.map(checklist => (
-              <div key={checklist.id}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2 text-slate-700 font-semibold">
-                    <CheckSquare size={18} />
-                    <h3>{checklist.title}</h3>
-                  </div>
-                  <Button variant="ghost" size="sm" className="h-7 text-xs">Delete</Button>
-                </div>
-                <div className="pl-6 space-y-2">
-                  {/* Progress bar */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xs text-slate-500 w-8">{Math.round((checklist.items.filter(i => i.isCompleted).length / checklist.items.length) * 100)}%</span>
-                    <div className="h-2 flex-1 bg-slate-100 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-slate-400 transition-all" 
-                        style={{ width: `${(checklist.items.filter(i => i.isCompleted).length / checklist.items.length) * 100}%` }}
-                      />
+            {card.checklists.map(checklist => {
+              const totalItems = checklist.items.length;
+              const completedItems = checklist.items.filter((i) => i.isCompleted).length;
+              const percentComplete = totalItems === 0 ? 0 : Math.round((completedItems / totalItems) * 100);
+
+              return (
+                <div key={checklist.id}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2 text-slate-700 font-semibold">
+                      <CheckSquare size={18} />
+                      <h3>{checklist.title}</h3>
                     </div>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs">Delete</Button>
                   </div>
-                  {/* Items */}
-                  {checklist.items.map(item => (
-                    <div key={item.id} className="flex items-start gap-3 group">
-                      <input type="checkbox" checked={item.isCompleted} readOnly className="mt-1 border-slate-300 rounded text-slate-900 focus:ring-slate-900" />
-                      <div className={`text-sm flex-1 ${item.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
-                        {item.title}
+                  <div className="pl-6 space-y-2">
+                    {/* Progress bar */}
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-xs text-slate-500 w-8">{percentComplete}%</span>
+                      <div className="h-2 flex-1 bg-slate-100 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-slate-400 transition-all" 
+                          style={{ width: `${percentComplete}%` }}
+                        />
                       </div>
                     </div>
-                  ))}
-                  <Button variant="secondary" size="sm" className="mt-2 text-xs">Add an item</Button>
+                    {/* Items */}
+                    {checklist.items.map(item => (
+                      <div key={item.id} className="flex items-start gap-3 group">
+                        <input type="checkbox" checked={item.isCompleted} readOnly className="mt-1 border-slate-300 rounded text-slate-900 focus:ring-slate-900" />
+                        <div className={`text-sm flex-1 ${item.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                          {item.title}
+                        </div>
+                      </div>
+                    ))}
+                    <Button variant="secondary" size="sm" className="mt-2 text-xs">Add an item</Button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {/* Comments */}
             <div>
@@ -153,20 +169,23 @@ export function CardDetailModal({ isOpen, onClose, card }: CardDetailModalProps)
                 </div>
                 
                 {/* Comment List */}
-                {card.comments.map(comment => (
-                  <div key={comment.id} className="flex gap-3">
-                    <Avatar initials="YK" size="md" /> {/* Hardcoded for dummy */}
-                    <div>
-                      <div className="flex items-baseline gap-2 mb-1">
-                        <span className="text-sm font-semibold text-slate-900">Yadhu Krishnan</span>
-                        <span className="text-xs text-slate-500">{new Date(comment.createdAt).toLocaleString()}</span>
-                      </div>
-                      <div className="text-sm text-slate-700 bg-white border border-slate-200 rounded-md p-2 shadow-sm">
-                        {comment.text}
+                {card.comments.map(comment => {
+                  const author = getUserById(comment.userId);
+                  return (
+                    <div key={comment.id} className="flex gap-3">
+                      <Avatar initials={author.initials} size="md" />
+                      <div>
+                        <div className="flex items-baseline gap-2 mb-1">
+                          <span className="text-sm font-semibold text-slate-900">{author.name}</span>
+                          <span className="text-xs text-slate-500">{new Date(comment.createdAt).toLocaleString()}</span>
+                        </div>
+                        <div className="text-sm text-slate-700 bg-white border border-slate-200 rounded-md p-2 shadow-sm">
+                          {comment.text}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 

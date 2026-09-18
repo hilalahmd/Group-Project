@@ -32,12 +32,20 @@ export default function Page(): React.JSX.Element {
     setError(null);
     setSuccess(null);
 
-    try {
-      // Mock registration for UI demo phase
+        try {
+      const { data, error } = await authClient.signUp.email({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (error) {
+        setError(error.message || "Failed to create account");
+        return;
+      }
+
       setSuccess("Account created successfully! Redirecting...");
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 1000);
+      router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`);
       
     } catch (err: any) {
       setError("An unexpected error occurred");

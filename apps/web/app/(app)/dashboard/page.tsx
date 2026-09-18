@@ -30,10 +30,10 @@ export default function DashboardPage() {
                 {favoriteBoards.map((board) => {
                   const workspace = MOCK_WORKSPACES.find(w => w.id === board.workspaceId);
                   
-                  const bgStyle = board.background?.type === 'color' 
-                    ? { backgroundColor: board.background.value.replace('bg-', '') }
-                    : board.background?.type === 'image'
+                  const bgStyle = board.background?.type === 'image'
                     ? { backgroundImage: `url(${board.background.value})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+                    : board.background?.type === 'color'
+                    ? undefined
                     : { backgroundColor: '#f1f5f9' };
 
                   const bgClass = board.background?.type === 'color' ? board.background.value : "";
@@ -69,10 +69,10 @@ export default function DashboardPage() {
               {recentBoards.map((board) => {
                 const workspace = MOCK_WORKSPACES.find(w => w.id === board.workspaceId);
                 
-                const bgStyle = board.background?.type === 'color' 
-                  ? { backgroundColor: board.background.value.replace('bg-', '') }
-                  : board.background?.type === 'image'
+                const bgStyle = board.background?.type === 'image'
                   ? { backgroundImage: `url(${board.background.value})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+                  : board.background?.type === 'color'
+                  ? undefined
                   : { backgroundColor: '#f1f5f9' };
 
                 const bgClass = board.background?.type === 'color' ? board.background.value : "";

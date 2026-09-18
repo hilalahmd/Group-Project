@@ -31,12 +31,19 @@ export default function Page(): React.JSX.Element {
     setError(null);
     setSuccess(null);
 
-    try {
-      // Mock login for UI demo phase
+        try {
+      const { data, error } = await authClient.signIn.email({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (error) {
+        setError(error.message || "Invalid email or password");
+        return;
+      }
+
       setSuccess("Logged in successfully! Redirecting...");
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 1000);
+      router.push("/dashboard");
       
     } catch (err: any) {
       setError("An unexpected error occurred");
@@ -94,7 +101,7 @@ export default function Page(): React.JSX.Element {
                 Password
               </label>
               {/* Note: Forgot password flow skipped for Phase 1/4 as per requirements */}
-              <a href="#" className="text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors">
+              <a href="/forgot-password" className="text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors">
                 Forgot password?
               </a>
             </div>

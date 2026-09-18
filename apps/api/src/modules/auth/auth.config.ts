@@ -11,6 +11,21 @@ export const auth = betterAuth({
     trustedOrigins: ["http://localhost:3000"],
     emailAndPassword: {
         enabled: true,
+        // Optional: requireEmailVerification: true, // Uncomment when ready to enforce
+        async sendResetPassword({ user, url }) {
+            // TODO: Wire up Resend/Sendgrid here
+            console.log("=========================================");
+            console.log(`[AUTH] Password Reset for ${user.email}`);
+            console.log(`[AUTH] Reset Link: ${url}`);
+            console.log("=========================================");
+        },
+        async sendVerificationEmail({ user, url }) {
+            // TODO: Wire up Resend/Sendgrid here
+            console.log("=========================================");
+            console.log(`[AUTH] Verify Email for ${user.email}`);
+            console.log(`[AUTH] Verification Link: ${url}`);
+            console.log("=========================================");
+        }
     },
     socialProviders: {
         google: {
@@ -25,4 +40,3 @@ export const auth = betterAuth({
         }
     }
 });
-
