@@ -1,61 +1,60 @@
 import Link from 'next/link';
+import { Button } from "../components/ui/button";
 
 export default function Home() {
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-slate-50 text-slate-900">
-      <header className="border-b border-slate-200 bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <h1 className="text-xl font-bold tracking-tight text-indigo-600">FlowBoard</h1>
+    <div className="min-h-screen flex flex-col justify-between bg-slate-50 text-slate-900 font-sans selection:bg-slate-200">
+      <header className="border-b border-slate-200 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="bg-slate-900 text-white rounded-lg w-8 h-8 flex items-center justify-center font-bold text-sm">
+              T
+            </div>
+            <h1 className="text-xl font-bold tracking-tight text-slate-900">Taskio</h1>
           </div>
           <nav className="flex items-center gap-4">
             <Link
               href="/login"
-              className="text-sm font-medium text-slate-700 hover:text-indigo-600 transition-colors"
+              className="text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors"
             >
               Sign In
             </Link>
-            <Link
-              href="/register"
-              className="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-indigo-700 transition-colors"
-            >
-              Get Started
+            <Link href="/register">
+              <Button variant="primary" className="rounded-full px-5">Get Started</Button>
             </Link>
           </nav>
         </div>
       </header>
 
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex flex-col justify-center items-center text-center">
-        <section className="max-w-3xl space-y-6">
-          <span className="inline-block rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700">
-            Project Management Made Simple
-          </span>
-          <h2 className="text-4xl font-extrabold tracking-tight sm:text-5xl">
-            Streamline your team&apos;s workflow with FlowBoard
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 flex flex-col justify-center items-center text-center">
+        <section className="max-w-3xl space-y-8">
+          <div className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
+            <span className="flex h-2 w-2 rounded-full bg-red-600 mr-2"></span> Project management, refined.
+          </div>
+          <h2 className="text-5xl font-extrabold tracking-tight text-slate-900 sm:text-7xl leading-tight">
+            Streamline your team&apos;s workflow.
           </h2>
-          <p className="text-lg text-slate-600">
-            Manage projects, track tasks, and collaborate seamlessly with custom boards and clear timelines.
+          <p className="text-xl text-slate-500 max-w-2xl mx-auto leading-relaxed">
+            Manage projects, track tasks, and collaborate seamlessly with custom boards and clear timelines. No clutter. Just focus.
           </p>
           <div className="flex justify-center gap-4 pt-4">
-            <Link
-              href="/register"
-              className="rounded-md bg-indigo-600 px-6 py-3 text-base font-medium text-white shadow hover:bg-indigo-700 transition-colors"
-            >
-              Start Free Trial
+            <Link href="/register">
+              <Button variant="primary" size="lg" className="rounded-full px-8 text-base">
+                Start Free Trial
+              </Button>
             </Link>
-            <Link
-              href="/login"
-              className="rounded-md border border-slate-300 bg-white px-6 py-3 text-base font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition-colors"
-            >
-              Sign In
+            <Link href="/login">
+               <Button variant="outline" size="lg" className="rounded-full px-8 text-base font-semibold">
+                Sign In
+              </Button>
             </Link>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-slate-200 bg-white py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm text-slate-500">
-          <p>&copy; {new Date().getFullYear()} FlowBoard. All rights reserved.</p>
+      <footer className="border-t border-slate-200 bg-white py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm text-slate-400 font-medium">
+          <p>&copy; {new Date().getFullYear()} Taskio. All rights reserved.</p>
         </div>
       </footer>
     </div>
