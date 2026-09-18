@@ -44,6 +44,7 @@ export type Card = {
   title: string;
   description?: string;
   dueDate?: string;
+  coverImageUrl?: string;
   labels: Label[];
   assignees: User[];
   checklists: Checklist[];
@@ -54,6 +55,7 @@ export type Card = {
 export type List = {
   id: string;
   title: string;
+  emoji?: string;
   cards: Card[];
 };
 
@@ -62,6 +64,7 @@ export type Board = {
   title: string;
   workspaceId: string;
   isFavorite: boolean;
+  background?: { type: 'color' | 'image'; value: string };
   lists: List[];
   members: User[];
 };
@@ -81,10 +84,10 @@ export const MOCK_USERS: User[] = [
 ];
 
 export const MOCK_LABELS: Label[] = [
-  { id: "l1", name: "Bug", color: "bg-red-500 text-white" },
-  { id: "l2", name: "Feature", color: "bg-blue-500 text-white" },
-  { id: "l3", name: "Design", color: "bg-purple-500 text-white" },
-  { id: "l4", name: "Urgent", color: "bg-orange-500 text-white" },
+  { id: "l1", name: "Bug", color: "bg-red-100 text-red-700" },
+  { id: "l2", name: "Feature", color: "bg-sky-100 text-sky-700" },
+  { id: "l3", name: "Design", color: "bg-fuchsia-100 text-fuchsia-700" },
+  { id: "l4", name: "Urgent", color: "bg-amber-100 text-amber-700" },
 ];
 
 export const MOCK_WORKSPACES: Workspace[] = [
@@ -108,16 +111,19 @@ export const MOCK_BOARDS: Board[] = [
     title: "Product Roadmap",
     workspaceId: "w1",
     isFavorite: true,
+    background: { type: 'color', value: 'bg-indigo-500' },
     members: MOCK_USERS,
     lists: [
       {
         id: "list-1",
         title: "To Do",
+        emoji: "📝",
         cards: [
           {
             id: "c1",
             title: "Design minimal landing page",
             description: "Update the landing page to match the new minimal aesthetic.",
+            coverImageUrl: "https://images.unsplash.com/photo-1558655146-d09347e92766?q=80&w=600&auto=format&fit=crop",
             dueDate: new Date(Date.now() + 86400000 * 3).toISOString(), // +3 days
             labels: [MOCK_LABELS[2], MOCK_LABELS[1]],
             assignees: [MOCK_USERS[0], MOCK_USERS[3]],
@@ -153,6 +159,7 @@ export const MOCK_BOARDS: Board[] = [
       {
         id: "list-2",
         title: "In Progress",
+        emoji: "🔥",
         cards: [
           {
             id: "c3",
@@ -168,6 +175,7 @@ export const MOCK_BOARDS: Board[] = [
       {
         id: "list-3",
         title: "Done",
+        emoji: "✅",
         cards: [
           {
             id: "c4",
@@ -187,6 +195,7 @@ export const MOCK_BOARDS: Board[] = [
     title: "Marketing Campaign Q4",
     workspaceId: "w1",
     isFavorite: false,
+    background: { type: 'image', value: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=2000&auto=format&fit=crop' },
     members: [MOCK_USERS[0], MOCK_USERS[3]],
     lists: [
       { id: "list-m1", title: "Ideas", cards: [] },

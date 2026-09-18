@@ -4,9 +4,10 @@ import * as React from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Layout, Plus, Users, Settings } from "lucide-react";
-import { MOCK_WORKSPACES, MOCK_BOARDS } from "../../../../lib/mock-data";
-import { Button } from "../../../../components/ui/button";
-import { Avatar } from "../../../../components/ui/avatar";
+import { MOCK_WORKSPACES, MOCK_BOARDS } from "@/lib/mock-data";
+import { Button } from "@/components/ui/button";
+import { Avatar } from "@/components/ui/avatar";
+import { CreateBoardModal } from "@/components/ui/create-board-modal";
 
 export default function WorkspacePage() {
   const params = useParams();
@@ -14,6 +15,7 @@ export default function WorkspacePage() {
   
   const workspace = MOCK_WORKSPACES.find((w) => w.slug === slug);
   const boards = MOCK_BOARDS.filter((b) => b.workspaceId === workspace?.id);
+  const [isCreateBoardOpen, setIsCreateBoardOpen] = React.useState(false);
 
   if (!workspace) {
     return <div className="p-8 text-slate-500">Workspace not found.</div>;
@@ -58,7 +60,10 @@ export default function WorkspacePage() {
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Create New Board Card */}
-          <button className="h-32 rounded-xl border border-dashed border-slate-300 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-400 transition-all flex flex-col items-center justify-center gap-2 text-slate-600 group">
+          <button 
+            className="h-32 rounded-xl border border-dashed border-slate-300 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-400 transition-all flex flex-col items-center justify-center gap-2 text-slate-600 group"
+            onClick={() => setIsCreateBoardOpen(true)}
+          >
              <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center group-hover:bg-slate-300 group-hover:text-slate-900 transition-colors">
                <Plus size={18} />
              </div>
@@ -85,6 +90,9 @@ export default function WorkspacePage() {
           ))}
         </div>
       </section>
+
+      {/* Modals */}
+      <CreateBoardModal isOpen={isCreateBoardOpen} onClose={() => setIsCreateBoardOpen(false)} />
     </div>
   );
 }

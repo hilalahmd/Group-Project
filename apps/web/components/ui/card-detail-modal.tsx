@@ -1,9 +1,9 @@
 import * as React from "react";
-import { Modal } from "./modal";
-import { Card as CardType, Label, Checklist, ChecklistItem, Comment, Attachment } from "../../lib/mock-data";
-import { Avatar } from "./avatar";
-import { Button } from "./button";
-import { Badge } from "./badge";
+import { Modal } from "@/components/ui/modal";
+import { Card as CardType, Label, Checklist, ChecklistItem, Comment, Attachment } from "@/lib/mock-data";
+import { Avatar } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { AlignLeft, CheckSquare, Clock, MessageSquare, Paperclip, Plus, Tag, Users } from "lucide-react";
 
 interface CardDetailModalProps {
@@ -16,8 +16,15 @@ export function CardDetailModal({ isOpen, onClose, card }: CardDetailModalProps)
   if (!card) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="max-w-2xl">
-      <div className="space-y-6">
+    <Modal isOpen={isOpen} onClose={onClose} className="max-w-3xl overflow-hidden p-0">
+      {/* Cover Image Header */}
+      {card.coverImageUrl && (
+        <div className="w-full h-32 md:h-48 bg-slate-100 relative">
+          <img src={card.coverImageUrl} alt="Card Cover" className="w-full h-full object-cover" />
+        </div>
+      )}
+      
+      <div className="space-y-6 p-6">
         
         {/* Header (Title & Board/List Context) */}
         <div>
@@ -166,15 +173,15 @@ export function CardDetailModal({ isOpen, onClose, card }: CardDetailModalProps)
           </div>
 
           {/* Sidebar Actions Column */}
-          <div className="w-full md:w-40 space-y-4">
+          <div className="w-full md:w-44 space-y-4">
              <div>
                <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Add to card</h4>
-               <div className="space-y-1.5 flex flex-col">
-                 <Button variant="secondary" size="sm" className="w-full justify-start gap-2 h-8 text-xs font-medium"><Users size={14}/> Members</Button>
-                 <Button variant="secondary" size="sm" className="w-full justify-start gap-2 h-8 text-xs font-medium"><Tag size={14}/> Labels</Button>
-                 <Button variant="secondary" size="sm" className="w-full justify-start gap-2 h-8 text-xs font-medium"><CheckSquare size={14}/> Checklist</Button>
-                 <Button variant="secondary" size="sm" className="w-full justify-start gap-2 h-8 text-xs font-medium"><Clock size={14}/> Dates</Button>
-                 <Button variant="secondary" size="sm" className="w-full justify-start gap-2 h-8 text-xs font-medium"><Paperclip size={14}/> Attachment</Button>
+               <div className="space-y-2 flex flex-col">
+                 <Button variant="secondary" size="sm" className="w-full justify-start gap-2 h-8 text-sm font-medium bg-slate-100 text-slate-700 hover:bg-slate-200"><Users size={16}/> Members</Button>
+                 <Button variant="secondary" size="sm" className="w-full justify-start gap-2 h-8 text-sm font-medium bg-slate-100 text-slate-700 hover:bg-slate-200"><Tag size={16}/> Labels</Button>
+                 <Button variant="secondary" size="sm" className="w-full justify-start gap-2 h-8 text-sm font-medium bg-slate-100 text-slate-700 hover:bg-slate-200"><CheckSquare size={16}/> Checklist</Button>
+                 <Button variant="secondary" size="sm" className="w-full justify-start gap-2 h-8 text-sm font-medium bg-slate-100 text-slate-700 hover:bg-slate-200"><Clock size={16}/> Dates</Button>
+                 <Button variant="secondary" size="sm" className="w-full justify-start gap-2 h-8 text-sm font-medium bg-slate-100 text-slate-700 hover:bg-slate-200"><Paperclip size={16}/> Attachment</Button>
                </div>
              </div>
           </div>

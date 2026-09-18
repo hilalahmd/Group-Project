@@ -155,9 +155,15 @@ export default function Page(): React.JSX.Element {
             type="button"
             variant="outline"
             className="w-full font-semibold text-slate-700"
-            onClick={() => {
-              setLoading(true);
-              setTimeout(() => router.push("/dashboard"), 500);
+            onClick={async () => {
+              try {
+                await authClient.signIn.social({
+                  provider: "google",
+                  callbackURL: "http://localhost:3000/dashboard"
+                });
+              } catch (err: any) {
+                setError(err.message || "Failed to connect to authentication server.");
+              }
             }}
           >
             Google
