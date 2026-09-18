@@ -2,18 +2,13 @@
 
 import React, { useState, ChangeEvent, FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import api from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
+import { Button } from "../../../components/ui/button";
+import { Input } from "../../../components/ui/input";
 
-// Interface for login credentials
-interface LoginFormData {
-  email: string;
-  password: string;
-}
-
-export default function LoginPage(): React.JSX.Element {
+export default function Page(): React.JSX.Element {
   const router = useRouter();
-  const [formData, setFormData] = useState<LoginFormData>({
+  const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
@@ -22,7 +17,6 @@ export default function LoginPage(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Handle typing in input fields
   const handleChange = (e: ChangeEvent<HTMLInputElement>): void => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -31,7 +25,6 @@ export default function LoginPage(): React.JSX.Element {
     }));
   };
 
-  // Submit login data to backend
   const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setLoading(true);
@@ -39,23 +32,10 @@ export default function LoginPage(): React.JSX.Element {
     setSuccess(null);
 
     try {
-      // better-auth vazhi login request ayakkunnu
-      const { data, error } = await authClient.signIn.email({
-          email: formData.email,
-          password: formData.password,
-      });
-      
-      // Backend-il ninnu thettanennu error vannal
-      if (error) {
-          setError(error.message || "Invalid email or password");
-          setLoading(false);
-          return;
-      }
-
-      // Success aayal
+      // Mock login for UI demo phase
       setSuccess("Logged in successfully! Redirecting...");
       setTimeout(() => {
-        router.push("/");
+        router.push("/dashboard");
       }, 1000);
       
     } catch (err: any) {
@@ -66,132 +46,117 @@ export default function LoginPage(): React.JSX.Element {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/10 p-8 shadow-2xl backdrop-blur-xl dark:bg-zinc-950/50">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4 font-sans text-slate-900">
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 p-8 bg-white shadow-sm">
         
         {/* Header / Branding */}
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/30">
-            <span className="text-sm font-bold text-white tracking-wider">KANBA</span>
+          <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-slate-900">
+            <span className="text-xl font-bold text-white">T</span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">Welcome back</h1>
-          <p className="mt-1 text-sm text-slate-400">Sign in to your FlowBoard workspace</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Welcome back</h1>
+          <p className="mt-2 text-sm text-slate-500">Sign in to your workspace</p>
         </div>
 
         {/* Error Alert */}
         {error && (
-          <div className="mb-4 rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-xs text-red-400 text-center font-medium">
+          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600 font-medium text-center">
             {error}
           </div>
         )}
 
         {/* Success Alert */}
         {success && (
-          <div className="mb-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3 text-xs text-emerald-400 text-center font-medium">
+          <div className="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-600 font-medium text-center">
             {success}
           </div>
         )}
 
         {/* Form Controls */}
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          {/* Email Address */}
-          <div>
-            <label className="block text-xs font-medium text-slate-200 mb-1.5">
+        <form className="space-y-5" onSubmit={handleSubmit}>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-semibold text-slate-900">
               Email address
             </label>
-            <input
+            <Input
               type="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
               placeholder="jane@acme.dev"
               required
-              className="w-full rounded-lg border border-white/10 bg-black/20 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 transition-all focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
 
-          {/* Password */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-medium text-slate-200">
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-semibold text-slate-900">
                 Password
               </label>
-              <a href="/forgot-password" className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
+              {/* Note: Forgot password flow skipped for Phase 1/4 as per requirements */}
+              <a href="#" className="text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors">
                 Forgot password?
               </a>
             </div>
-            <input
+            <Input
               type="password"
               name="password"
               value={formData.password}
               onChange={handleChange}
               placeholder="••••••••"
               required
-              className="w-full rounded-lg border border-white/10 bg-black/20 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 transition-all focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
 
-          {/* Remember Checkbox */}
-          <div className="flex items-center space-x-2 pt-1">
-            <input
-              type="checkbox"
-              id="remember"
-              className="h-4 w-4 rounded border-white/10 bg-black/20 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0 cursor-pointer"
-            />
-            <label htmlFor="remember" className="text-xs text-slate-400 cursor-pointer select-none">
-              Remember this device
-            </label>
-          </div>
-
-          {/* Submit Button */}
-          <button
+          <Button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:from-indigo-500 hover:to-purple-500 active:scale-[0.98] disabled:opacity-50"
+            variant="primary"
+            className="w-full h-11 text-base mt-2"
           >
-            {loading ? "Signing in..." : "Sign in"}
-          </button>
+            {loading ? "Signing in..." : "Sign In"}
+          </Button>
         </form>
 
         {/* Divider */}
-        <div className="relative my-6">
+        <div className="relative my-8">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-white/10"></div>
+            <div className="w-full border-t border-slate-200"></div>
           </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-slate-900/80 px-2 text-slate-400">Or continue with</span>
+          <div className="relative flex justify-center text-xs font-semibold">
+            <span className="bg-white px-4 text-slate-400">Or continue with</span>
           </div>
         </div>
 
         {/* OAuth Buttons */}
-        <div className="grid grid-cols-2 gap-3">
-          <button 
-            type="button" 
-            className="flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
-          >
-            <i className="fa-brands fa-microsoft text-blue-600"></i>
-            <span>Microsoft</span>  
-          </button>
-          <button 
-            type="button" 
-            onClick={async () => {
-              await authClient.signIn.social({
-                provider: "google",
-                callbackURL: "http://localhost:3000/"
-              });
+        <div className="grid grid-cols-2 gap-4">
+          <Button 
+            variant="outline" 
+            className="w-full font-semibold text-slate-700"
+            onClick={() => {
+              setLoading(true);
+              setTimeout(() => router.push("/dashboard"), 500);
             }}
-            className="flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
           >
-            <i className="fa-brands fa-google text-[#4285F4]"></i>
-            <span>Google</span>
-          </button>
+            Microsoft
+          </Button>
+          <Button 
+            variant="outline"
+            className="w-full font-semibold text-slate-700"
+            onClick={() => {
+              setLoading(true);
+              setTimeout(() => router.push("/dashboard"), 500);
+            }}
+          >
+            Google
+          </Button>
         </div>
 
-        {/* Navigation to Register */}
-        <p className="mt-8 text-center text-xs text-slate-400">
-          Don&apos;t have an account?{" "}
-          <a href="/register" className="font-semibold text-indigo-400 hover:text-indigo-300">
-            Create an account
+        {/* Footer Link */}
+        <p className="mt-8 text-center text-sm font-medium text-slate-500">
+          Don't have an account?{" "}
+          <a href="/register" className="text-slate-900 font-semibold hover:underline">
+            Sign up
           </a>
         </p>
       </div>
