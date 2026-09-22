@@ -9,6 +9,8 @@ export const auth = betterAuth({
         provider: "postgresql",
     }),
     trustedOrigins: ["http://localhost:3000"],
+    
+    // 1. Email and Password Settings
     emailAndPassword: {
         enabled: true,
         // Optional: requireEmailVerification: true, // Uncomment when ready to enforce
@@ -27,6 +29,8 @@ export const auth = betterAuth({
             console.log("=========================================");
         }
     },
+
+    // 2. Social Providers
     socialProviders: {
         google: {
             clientId: process.env.GOOGLE_CLIENT_ID as string,
@@ -34,6 +38,43 @@ export const auth = betterAuth({
         }
     },  
 
+    // 3. Custom Fields (Telling Better-Auth about our Prisma fields)
+    user: {
+        additionalFields: {
+            username: {
+                type: "string",
+                required: false,
+            },
+            displayName: {
+                type: "string",
+                required: false,
+            }
+        }
+    },
+
+    // 4. Database Hooks (Generating username before saving)
+    databaseHooks: {
+        user: {
+            create: {
+                before: async (user) => {
+                    // Extract first part of email for username
+                    const emailUsername = user.email.split('@')[0];
+                    // Generate a 4 digit random number
+                    const randomNum = Math.floor(1000 + Math.random() * 9000);
+                    
+                    return {
+                        data: {
+                            ...user,
+                            username: user.username || `${emailUsername}${randomNum}`,
+                            displayName: user.displayName || user.name
+                        }
+                    };
+                }
+            }
+        }
+    },
+
+    // 5. Advanced Settings
     advanced: {
         database: {
             generateId: false
