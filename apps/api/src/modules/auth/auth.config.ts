@@ -14,14 +14,15 @@ export const auth = betterAuth({
     emailAndPassword: {
         enabled: true,
         // Optional: requireEmailVerification: true, // Uncomment when ready to enforce
-        async sendResetPassword({ user, url }) {
+        async sendResetPassword({ user, url }: any) {
             // TODO: Wire up Resend/Sendgrid here
             console.log("=========================================");
             console.log(`[AUTH] Password Reset for ${user.email}`);
             console.log(`[AUTH] Reset Link: ${url}`);
             console.log("=========================================");
         },
-        async sendVerificationEmail({ user, url }) {
+        async sendVerificationEmail({ user, url }: any) {
+
             // TODO: Wire up Resend/Sendgrid here
             console.log("=========================================");
             console.log(`[AUTH] Verify Email for ${user.email}`);
