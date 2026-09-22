@@ -56,7 +56,7 @@ export const auth = betterAuth({
     databaseHooks: {
         user: {
             create: {
-                before: async (user) => {
+                before: async (user: any) => {
                     // Extract first part of email for username
                     const emailUsername = user.email.split('@')[0];
                     // Generate a 4 digit random number
