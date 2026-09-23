@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Search, Bell, Plus, Settings, Home, Layout, ChevronLeft, ChevronRight, Users } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Search, Bell, Plus, Settings, Home, Layout, ChevronLeft, ChevronRight, Users, User as UserIcon } from "lucide-react";
 import { Avatar } from "../../components/ui/avatar";
 import { Button } from "../../components/ui/button";
 import { Dropdown } from "../../components/ui/dropdown";
@@ -11,16 +11,42 @@ import { MOCK_WORKSPACES, MOCK_USERS, MOCK_BOARDS } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 import { CreateBoardModal } from "@/components/ui/create-board-modal";
 import { CreateWorkspaceModal } from "@/components/ui/create-workspace-modal";
+import { authClient } from "@/lib/auth-client";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
   const [isCreateBoardOpen, setIsCreateBoardOpen] = React.useState(false);
   const [isCreateWorkspaceOpen, setIsCreateWorkspaceOpen] = React.useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+
+  const { data: session } = authClient.useSession();
   
-  const currentUser = MOCK_USERS[0]; // Assuming Hilal is logged in
-  const currentWorkspace = MOCK_WORKSPACES[0];
-  const favoriteBoards = MOCK_BOARDS.filter(b => b.isFavorite);
+  const defaultUser = MOCK_USERS[0] || { name: "User", email: "user@example.com", initials: "U" };
+  const currentUser = {
+    name: session?.user?.name || defaultUser.name,
+    email: session?.user?.email || defaultUser.email,
+    initials: session?.user?.name
+      ? session.user.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
+      : defaultUser.initials,
+  };
+  const currentWorkspace = MOCK_WORKSPACES[0] || { id: "1", name: "Workspace", slug: "workspace" };
+  const favoriteBoards = (MOCK_BOARDS || []).filter(b => b && b.isFavorite);
+
+  const handleLogout = async () => {
+    try {
+      await authClient.signOut({
+        fetchOptions: {
+          onSuccess: () => {
+            router.push("/login");
+          }
+        }
+      });
+    } catch (err) {
+      console.error("Logout error:", err);
+      router.push("/login");
+    }
+  };
 
   return (
     <div className="flex h-screen w-full bg-slate-50 text-slate-900 font-sans overflow-hidden">
@@ -122,11 +148,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </div>
             }
           >
-            <div className="px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 cursor-pointer flex items-center gap-2">
-              <Settings size={16} /> Settings
-            </div>
+            <Link href="/profile" className="px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 cursor-pointer flex items-center gap-2">
+              <UserIcon size={16} /> Profile & Settings
+            </Link>
             <div className="border-t border-slate-100 my-1" />
-            <div className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer">
+            <div 
+              onClick={handleLogout}
+              className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer"
+            >
               Log out
             </div>
           </Dropdown>
@@ -162,14 +191,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </div>
               <div className="py-2">
                 <div className="px-4 py-1 text-xs font-semibold text-slate-500 uppercase tracking-wider">Recent Boards</div>
-                <Link href={`/w/${MOCK_WORKSPACES[0].slug}/b/${MOCK_BOARDS[0].id}`} className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
-                  <div className="font-medium text-slate-900">{MOCK_BOARDS[0].title}</div>
-                  <div className="text-xs text-slate-500">{MOCK_WORKSPACES[0].name}</div>
-                </Link>
-                <Link href={`/w/${MOCK_WORKSPACES[0].slug}/b/${MOCK_BOARDS[1].id}`} className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
-                  <div className="font-medium text-slate-900">{MOCK_BOARDS[1].title}</div>
-                  <div className="text-xs text-slate-500">{MOCK_WORKSPACES[0].name}</div>
-                </Link>
+                {MOCK_WORKSPACES[0] && MOCK_BOARDS[0] && (
+                  <Link href={`/w/${MOCK_WORKSPACES[0].slug}/b/${MOCK_BOARDS[0].id}`} className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                    <div className="font-medium text-slate-900">{MOCK_BOARDS[0].title}</div>
+                    <div className="text-xs text-slate-500">{MOCK_WORKSPACES[0].name}</div>
+                  </Link>
+                )}
+                {MOCK_WORKSPACES[0] && MOCK_BOARDS[1] && (
+                  <Link href={`/w/${MOCK_WORKSPACES[0].slug}/b/${MOCK_BOARDS[1].id}`} className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                    <div className="font-medium text-slate-900">{MOCK_BOARDS[1].title}</div>
+                    <div className="text-xs text-slate-500">{MOCK_WORKSPACES[0].name}</div>
+                  </Link>
+                )}
               </div>
             </Dropdown>
           </div>

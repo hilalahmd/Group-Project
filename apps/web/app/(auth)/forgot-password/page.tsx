@@ -20,7 +20,7 @@ export default function ForgotPasswordPage(): React.JSX.Element {
     setSuccess(null);
 
     try {
-      const { data, error } = await authClient.forgetPassword({
+      const { data, error } = await (authClient as any).forgetPassword({
         email,
         redirectTo: "/reset-password",
       });

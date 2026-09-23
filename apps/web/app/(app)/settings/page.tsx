@@ -1,12 +1,12 @@
 import * as React from "react";
 import { User, Lock, Mail, Camera } from "lucide-react";
-import { Button } from "../../../../components/ui/button";
-import { Input } from "../../../../components/ui/input";
-import { Avatar } from "../../../../components/ui/avatar";
-import { MOCK_USERS } from "../../../../lib/mock-data";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Avatar } from "@/components/ui/avatar";
+import { MOCK_USERS } from "@/lib/mock-data";
 
 export default function UserSettingsPage() {
-  const currentUser = MOCK_USERS[0];
+  const currentUser = MOCK_USERS[0] || { name: "User", email: "user@example.com", initials: "U" };
 
   return (
     <div className="p-8 max-w-3xl mx-auto space-y-8">
