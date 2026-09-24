@@ -7,9 +7,11 @@ const prisma = new PrismaClient();
 export const createBoard = async (req: Request, res: Response) => {
     try {
         const user = res.locals.user;
+        console.log("DEBUG: received req.body in createBoard:", req.body);
         const { workspaceId, name, visibility, background } = req.body;
 
         if (!workspaceId || !name || !visibility) {
+            console.log("DEBUG: validation failed. workspaceId:", workspaceId, "name:", name, "visibility:", visibility);
             res.status(400).json({ message: "WorkspaceId, name, and visibility are required" });
             return;
         }
@@ -59,6 +61,45 @@ export const getWorkspaceBoards = async (req: Request, res: Response) => {
         res.status(200).json(boards);
     } catch (error) {
         console.error("Get Boards Error:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
+// Oru prathyeka board edukkan (with lists and cards)
+export const getBoardById = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        const board = await prisma.board.findUnique({
+            where: { id: BigInt(id) },
+            include: {
+                members: {
+                    include: { user: true }
+                },
+                lists: {
+                    where: { archivedAt: null },
+                    orderBy: { position: 'asc' },
+                    include: {
+                        cards: {
+                            where: { archivedAt: null },
+                            orderBy: { position: 'asc' },
+                            include: {
+                                members: { include: { user: true } }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        if (!board) {
+            res.status(404).json({ message: "Board not found" });
+            return;
+        }
+
+        res.status(200).json(board);
+    } catch (error) {
+        console.error("Get Board Error:", error);
         res.status(500).json({ message: "Internal Server Error" });
     }
 };

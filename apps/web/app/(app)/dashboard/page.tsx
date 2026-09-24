@@ -2,45 +2,49 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Clock, Star, Users } from "lucide-react";
+import { Clock, Star, Users, Plus } from "lucide-react";
 import api from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { CreateBoardModal } from "@/components/ui/create-board-modal";
 
 export default function DashboardPage() {
   const [workspaces, setWorkspaces] = useState<any[]>([]);
   const [boards, setBoards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isBoardModalOpen, setIsBoardModalOpen] = useState(false);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      // 1. Aadyam User-nte Workspaces edukkunnu
+      const wsRes = await api.get("/api/workspaces");
+      const userWorkspaces = wsRes.data;
+      setWorkspaces(userWorkspaces);
+
+      // 2. Ennittu oro workspace-ilum ulla Boards edukkunnu
+      let allBoards: any[] = [];
+      for (const ws of userWorkspaces) {
+         const boardRes = await api.get(`/api/boards/workspace/${ws.id}`);
+         // UI-il kanikkan vendi board-nte koode workspace details koodi add cheyyunnu
+         const mappedBoards = boardRes.data.map((b: any) => ({ 
+             ...b, 
+             workspaceName: ws.name, 
+             workspaceSlug: ws.slug 
+         }));
+         allBoards.push(...mappedBoards);
+      }
+      setBoards(allBoards);
+      
+    } catch (err) {
+      console.error("Failed to fetch dashboard data:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Component load aavumbo thanne database-il ninnu data fetch cheyyan
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        // 1. Aadyam User-nte Workspaces edukkunnu
-        const wsRes = await api.get("/api/workspaces");
-        const userWorkspaces = wsRes.data;
-        setWorkspaces(userWorkspaces);
-
-        // 2. Ennittu oro workspace-ilum ulla Boards edukkunnu
-        let allBoards: any[] = [];
-        for (const ws of userWorkspaces) {
-           const boardRes = await api.get(`/api/boards/workspace/${ws.id}`);
-           // UI-il kanikkan vendi board-nte koode workspace details koodi add cheyyunnu
-           const mappedBoards = boardRes.data.map((b: any) => ({ 
-               ...b, 
-               workspaceName: ws.name, 
-               workspaceSlug: ws.slug 
-           }));
-           allBoards.push(...mappedBoards);
-        }
-        setBoards(allBoards);
-        
-      } catch (err) {
-        console.error("Failed to fetch dashboard data:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchDashboardData();
   }, []);
 
@@ -168,10 +172,19 @@ export default function DashboardPage() {
                         <p className="text-xs text-slate-500 font-medium">{workspace.members?.length || 1} members</p>
                         </div>
                     </div>
-                    <div className="px-4 py-2 bg-slate-50 border-t border-slate-100">
-                        <Link href={`/w/${workspace.slug}`} className="block text-center py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm">
+                    <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex gap-2">
+                        <Link href={`/w/${workspace.slug}`} className="flex-1 text-center py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm">
                         Open Workspace
                         </Link>
+                        <button 
+                          onClick={() => {
+                            setSelectedWorkspaceId(workspace.id);
+                            setIsBoardModalOpen(true);
+                          }}
+                          className="flex items-center justify-center px-3 py-1.5 text-xs font-semibold text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors shadow-sm"
+                        >
+                          <Plus size={14} className="mr-1" /> Board
+                        </button>
                     </div>
                     </div>
                 ))
@@ -181,6 +194,13 @@ export default function DashboardPage() {
         </div>
 
       </div>
+      
+      <CreateBoardModal 
+        isOpen={isBoardModalOpen} 
+        onClose={() => setIsBoardModalOpen(false)} 
+        workspaceId={selectedWorkspaceId} 
+        onSuccess={fetchDashboardData} 
+      />
     </div>
   );
 }
