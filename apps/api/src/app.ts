@@ -2,7 +2,10 @@ import express from "express"
 import cors from 'cors'
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./modules/auth/auth.config.js";
+import workspaceRoutes from "./modules/workspaces/workspaces.route.js";
 import morgan from 'morgan';
+import boardRoutes from "./modules/boards/boards.route.js";
+
 
 
 // Handle BigInt serialization in JSON response
@@ -28,6 +31,8 @@ app.get('/healthz',(req,res)=>{
 })
 
 app.use("/api/auth", toNodeHandler(auth));
+app.use("/api/workspaces", workspaceRoutes);
+app.use("/api/boards", boardRoutes);
 
 
 
