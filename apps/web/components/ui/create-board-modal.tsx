@@ -3,10 +3,13 @@ import { Modal } from "./modal";
 import { Button } from "./button";
 import { Input } from "./input";
 import { Layout } from "lucide-react";
+import api from "@/lib/api";
 
 interface CreateBoardModalProps {
   isOpen: boolean;
   onClose: () => void;
+  workspaceId: string; // Required: To know which workspace to save the board in
+  onSuccess?: () => void; // Optional: To tell the parent component to refresh data
 }
 
 const THEMES = [
@@ -21,11 +24,50 @@ const THEMES = [
   { type: "image", value: "https://images.unsplash.com/photo-1490730141103-6cac27aaab94?q=80&w=200&auto=format&fit=crop", label: "Ocean" },
 ];
 
-export function CreateBoardModal({ isOpen, onClose }: CreateBoardModalProps) {
+export function CreateBoardModal({ isOpen, onClose, workspaceId, onSuccess }: CreateBoardModalProps) {
   const [selectedTheme, setSelectedTheme] = React.useState(THEMES[0]);
   const [boardTitle, setBoardTitle] = React.useState("");
+  const [isSubmitting, setIsSubmitting] = React.useState(false); // Track loading state
+
+  // Reset form when modal opens/closes
+  React.useEffect(() => {
+    if (isOpen) {
+      setBoardTitle("");
+      setSelectedTheme(THEMES[0]);
+      setIsSubmitting(false);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
+
+  // Professional API submission handler
+  const handleCreateBoard = async () => {
+    if (!boardTitle.trim()) return;
+    
+    try {
+      setIsSubmitting(true);
+      
+      // Call our backend API
+      await api.post('/api/boards', {
+        workspaceId,
+        name: boardTitle,
+        visibility: 'workspace', // Default visibility
+        background: selectedTheme, // Store the selected theme object directly
+      });
+
+      // Call onSuccess to trigger a re-fetch in the Dashboard
+      if (onSuccess) {
+        onSuccess();
+      }
+      
+      onClose(); // Close the modal
+    } catch (error) {
+      console.error("Failed to create board:", error);
+      // In a real app, you might show a toast notification here
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="max-w-md p-6">
@@ -47,6 +89,7 @@ export function CreateBoardModal({ isOpen, onClose }: CreateBoardModalProps) {
               <button
                 key={i}
                 onClick={() => setSelectedTheme(theme)}
+                disabled={isSubmitting} // Disable while submitting
                 className={`w-full aspect-video rounded-md overflow-hidden flex items-center justify-center relative hover:opacity-90 transition-opacity ${
                   selectedTheme === theme ? "ring-2 ring-slate-900 ring-offset-1" : ""
                 } ${theme.type === "color" ? theme.value : ""}`}
@@ -72,19 +115,17 @@ export function CreateBoardModal({ isOpen, onClose }: CreateBoardModalProps) {
             placeholder="e.g. Marketing Campaign" 
             autoFocus 
             required 
+            disabled={isSubmitting} // Disable while submitting
           />
         </div>
 
         <Button 
           variant="primary" 
           className="w-full" 
-          disabled={!boardTitle.trim()}
-          onClick={() => {
-            // Mock submission
-            onClose();
-          }}
+          disabled={!boardTitle.trim() || isSubmitting}
+          onClick={handleCreateBoard}
         >
-          Create Board
+          {isSubmitting ? "Creating..." : "Create Board"}
         </Button>
       </div>
     </Modal>
