@@ -101,7 +101,7 @@ export const MOCK_WORKSPACES: Workspace[] = [
     id: "w2",
     slug: "personal-projects",
     name: "Personal Projects",
-    members: [MOCK_USERS[0]],
+    members: [MOCK_USERS[0]!],
   },
 ];
 
@@ -125,8 +125,8 @@ export const MOCK_BOARDS: Board[] = [
             description: "Update the landing page to match the new minimal aesthetic.",
             coverImageUrl: "https://images.unsplash.com/photo-1558655146-d09347e92766?q=80&w=600&auto=format&fit=crop",
             dueDate: new Date(Date.now() + 86400000 * 3).toISOString(), // +3 days
-            labels: [MOCK_LABELS[2], MOCK_LABELS[1]],
-            assignees: [MOCK_USERS[0], MOCK_USERS[3]],
+            labels: [MOCK_LABELS[2]!, MOCK_LABELS[1]!],
+            assignees: [MOCK_USERS[0]!, MOCK_USERS[3]!],
             checklists: [
               {
                 id: "chk1",
@@ -146,8 +146,8 @@ export const MOCK_BOARDS: Board[] = [
             id: "c2",
             title: "Fix auth redirection loop",
             dueDate: new Date(Date.now() - 86400000 * 1).toISOString(), // -1 day (overdue)
-            labels: [MOCK_LABELS[0], MOCK_LABELS[3]],
-            assignees: [MOCK_USERS[1]],
+            labels: [MOCK_LABELS[0]!, MOCK_LABELS[3]!],
+            assignees: [MOCK_USERS[1]!],
             checklists: [],
             comments: [],
             attachments: [
@@ -164,8 +164,8 @@ export const MOCK_BOARDS: Board[] = [
           {
             id: "c3",
             title: "Implement drag and drop",
-            labels: [MOCK_LABELS[1]],
-            assignees: [MOCK_USERS[0], MOCK_USERS[1], MOCK_USERS[2]],
+            labels: [MOCK_LABELS[1]!],
+            assignees: [MOCK_USERS[0]!, MOCK_USERS[1]!, MOCK_USERS[2]!],
             checklists: [],
             comments: [],
             attachments: [],
@@ -181,7 +181,7 @@ export const MOCK_BOARDS: Board[] = [
             id: "c4",
             title: "Setup Next.js project",
             labels: [],
-            assignees: [MOCK_USERS[2]],
+            assignees: [MOCK_USERS[2]!],
             checklists: [],
             comments: [],
             attachments: [],
@@ -196,7 +196,7 @@ export const MOCK_BOARDS: Board[] = [
     workspaceId: "w1",
     isFavorite: false,
     background: { type: 'image', value: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=2000&auto=format&fit=crop' },
-    members: [MOCK_USERS[0], MOCK_USERS[3]],
+    members: [MOCK_USERS[0]!, MOCK_USERS[3]!],
     lists: [
       { id: "list-m1", title: "Ideas", cards: [] },
       { id: "list-m2", title: "Executing", cards: [] },
