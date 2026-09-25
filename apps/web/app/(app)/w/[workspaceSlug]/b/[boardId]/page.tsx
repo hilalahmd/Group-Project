@@ -12,6 +12,7 @@ import { CardDetailModal } from "@/components/ui/card-detail-modal";
 import { CardFace } from "@/components/ui/card-face";
 import { InviteMemberModal } from "@/components/ui/invite-member-modal";
 import { cn } from "@/lib/utils";
+import api from "@/lib/api";
 
 // --- Main Page Component ---
 
@@ -19,13 +20,61 @@ export default function BoardPage() {
   const params = useParams();
   const boardId = params.boardId as string;
   
-  // Find initial board data
-  const initialBoard = MOCK_BOARDS.find(b => b.id === boardId);
-
-  // Local React State for the Board (Drag and Drop + Add operations)
-  const [board, setBoard] = React.useState(initialBoard);
+  const [board, setBoard] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(true);
+  
   const [isAddingList, setIsAddingList] = React.useState(false);
   const [newListTitle, setNewListTitle] = React.useState("");
+
+  React.useEffect(() => {
+    const fetchBoard = async () => {
+      try {
+        setLoading(true);
+        const res = await api.get(`/api/boards/${boardId}`);
+        const boardData = res.data;
+        
+        // Map DB fields to UI expected fields
+        boardData.title = boardData.name;
+        
+        if (boardData.members) {
+          boardData.members = boardData.members.map((m: any) => ({
+            ...m,
+            id: m.user?.id || m.userId,
+            name: m.user?.name || 'Unknown',
+            initials: m.user?.name ? m.user.name.charAt(0).toUpperCase() : 'U'
+          }));
+        } else {
+          boardData.members = [];
+        }
+
+        if (boardData.lists) {
+          boardData.lists = boardData.lists.map((l: any) => ({
+            ...l,
+            title: l.name,
+            cards: l.cards ? l.cards.map((c: any) => ({
+              ...c,
+              labels: c.labels || [],
+              assignees: c.assignees || [],
+              checklists: c.checklists || [],
+              comments: c.comments || [],
+              attachments: c.attachments || []
+            })) : []
+          }));
+        } else {
+          boardData.lists = [];
+        }
+
+        setBoard(boardData);
+      } catch (error) {
+        console.error("Failed to fetch board:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (boardId) {
+      fetchBoard();
+    }
+  }, [boardId]);
   
   const [addingCardToListId, setAddingCardToListId] = React.useState<string | null>(null);
   const [newCardTitle, setNewCardTitle] = React.useState("");
@@ -51,6 +100,14 @@ export default function BoardPage() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center bg-slate-50">
+        <p className="text-slate-500 font-medium animate-pulse">Loading board...</p>
+      </div>
+    );
+  }
 
   if (!board) {
     return (

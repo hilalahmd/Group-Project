@@ -74,6 +74,7 @@ model WorkspaceMember {
 // 4. Boards
 
 model Board {
+
   id          BigInt    @id @default(autoincrement())
   workspaceId BigInt    @map("workspace_id")
   name        String
@@ -84,6 +85,8 @@ model Board {
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   archivedAt  DateTime? @map("archived_at") @db.Timestamptz
+  isFavorite  Boolean   @default(false) @map("is_favorite")
+  background  Json?     // Storing { type: 'color'|'image', value: '...' }
 
   workspace Workspace     @relation(fields: [workspaceId], references: [id])
   creator   User          @relation("BoardCreator", fields: [createdById], references: [id])
