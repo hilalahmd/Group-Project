@@ -30,9 +30,15 @@ app.get('/healthz',(req,res)=>{
     })
 })
 
+import userRoutes from "./modules/users/user.routes.js";
+
 app.use("/api/auth", toNodeHandler(auth));
+<<<<<<< HEAD
+app.use("/api/users", userRoutes);
+=======
 app.use("/api/workspaces", workspaceRoutes);
 app.use("/api/boards", boardRoutes);
+>>>>>>> a5c5eaadc07e0a0e6be799c8f802dc85dd66be81
 
 
 

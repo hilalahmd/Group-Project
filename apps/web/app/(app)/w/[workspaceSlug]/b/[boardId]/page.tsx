@@ -142,7 +142,9 @@ export default function BoardPage() {
       // Reordering within the same list
       const newCards = Array.from(sourceList.cards);
       const [movedCard] = newCards.splice(source.index, 1);
-      newCards.splice(destination.index, 0, movedCard);
+      if (movedCard) {
+        newCards.splice(destination.index, 0, movedCard);
+      }
 
       const newLists = board.lists.map(l => l.id === sourceList.id ? { ...l, cards: newCards } : l);
       setBoard({ ...board, lists: newLists });
@@ -152,7 +154,9 @@ export default function BoardPage() {
       const destCards = Array.from(destList.cards);
       
       const [movedCard] = sourceCards.splice(source.index, 1);
-      destCards.splice(destination.index, 0, movedCard);
+      if (movedCard) {
+        destCards.splice(destination.index, 0, movedCard);
+      }
 
       const newLists = board.lists.map(l => {
         if (l.id === sourceList.id) return { ...l, cards: sourceCards };
