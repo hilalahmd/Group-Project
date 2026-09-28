@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Modal } from "./modal";
 import { Button } from "./button";
 import { Input } from "./input";
@@ -8,8 +9,8 @@ import api from "@/lib/api";
 interface CreateBoardModalProps {
   isOpen: boolean;
   onClose: () => void;
-  workspaceId: string; // Required: To know which workspace to save the board in
-  onSuccess?: () => void; // Optional: To tell the parent component to refresh data
+  workspaceId?: string; // Made optional for global top-bar trigger
+  onSuccess?: () => void;
 }
 
 const THEMES = [
@@ -25,45 +26,74 @@ const THEMES = [
 ];
 
 export function CreateBoardModal({ isOpen, onClose, workspaceId, onSuccess }: CreateBoardModalProps) {
+  const router = useRouter();
   const [selectedTheme, setSelectedTheme] = React.useState(THEMES[0]);
   const [boardTitle, setBoardTitle] = React.useState("");
-  const [isSubmitting, setIsSubmitting] = React.useState(false); // Track loading state
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [workspaces, setWorkspaces] = React.useState<any[]>([]);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = React.useState<string>(workspaceId || "");
+  const [errorMessage, setErrorMessage] = React.useState("");
 
-  // Reset form when modal opens/closes
+  // Load workspaces if not provided via props
   React.useEffect(() => {
     if (isOpen) {
       setBoardTitle("");
       setSelectedTheme(THEMES[0]);
       setIsSubmitting(false);
+      setErrorMessage("");
+
+      if (workspaceId) {
+        setSelectedWorkspaceId(workspaceId);
+      } else {
+        api.get("/api/workspaces")
+          .then((res) => {
+            const list = res.data || [];
+            setWorkspaces(list);
+            if (list.length > 0) {
+              setSelectedWorkspaceId(String(list[0].id));
+            }
+          })
+          .catch((err) => {
+            console.error("Failed to fetch workspaces:", err);
+          });
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, workspaceId]);
 
   if (!isOpen) return null;
 
-  // Professional API submission handler
+  const targetWorkspaceId = workspaceId || selectedWorkspaceId;
+
   const handleCreateBoard = async () => {
-    if (!boardTitle.trim()) return;
+    if (!boardTitle.trim() || !targetWorkspaceId) {
+      setErrorMessage("Please select a workspace and enter a board title.");
+      return;
+    }
     
     try {
       setIsSubmitting(true);
+      setErrorMessage("");
       
-      // Call our backend API
-      await api.post('/api/boards', {
-        workspaceId,
-        name: boardTitle,
-        visibility: 'workspace', // Default visibility
-        background: selectedTheme, // Store the selected theme object directly
+      const res = await api.post('/api/boards', {
+        workspaceId: targetWorkspaceId,
+        name: boardTitle.trim(),
+        visibility: 'workspace',
+        background: selectedTheme,
       });
 
-      // Call onSuccess to trigger a re-fetch in the Dashboard
       if (onSuccess) {
         onSuccess();
+      } else {
+        // If created from global top-bar, navigate directly to the new board
+        const matchedWs = workspaces.find((w) => String(w.id) === String(targetWorkspaceId));
+        const slug = matchedWs?.slug || "workspace";
+        router.push(`/w/${slug}/b/${res.data.id}`);
       }
       
-      onClose(); // Close the modal
-    } catch (error) {
+      onClose();
+    } catch (error: any) {
       console.error("Failed to create board:", error);
-      // In a real app, you might show a toast notification here
+      setErrorMessage(error?.response?.data?.message || "Failed to create board. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -82,6 +112,31 @@ export function CreateBoardModal({ isOpen, onClose, workspaceId, onSuccess }: Cr
       </div>
 
       <div className="space-y-6">
+        {/* Workspace Selector (only shown when workspaceId was not pre-set) */}
+        {!workspaceId && (
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Workspace <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={selectedWorkspaceId}
+              onChange={(e) => setSelectedWorkspaceId(e.target.value)}
+              disabled={isSubmitting || workspaces.length === 0}
+              className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {workspaces.length === 0 ? (
+                <option value="">No workspaces available</option>
+              ) : (
+                workspaces.map((ws) => (
+                  <option key={ws.id} value={ws.id}>
+                    {ws.name}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+        )}
+
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-2">Background</label>
           <div className="grid grid-cols-5 gap-2">
@@ -89,7 +144,7 @@ export function CreateBoardModal({ isOpen, onClose, workspaceId, onSuccess }: Cr
               <button
                 key={i}
                 onClick={() => setSelectedTheme(theme)}
-                disabled={isSubmitting} // Disable while submitting
+                disabled={isSubmitting}
                 className={`w-full aspect-video rounded-md overflow-hidden flex items-center justify-center relative hover:opacity-90 transition-opacity ${
                   selectedTheme === theme ? "ring-2 ring-slate-900 ring-offset-1" : ""
                 } ${theme.type === "color" ? theme.value : ""}`}
@@ -108,21 +163,27 @@ export function CreateBoardModal({ isOpen, onClose, workspaceId, onSuccess }: Cr
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-2">Board title <span className="text-red-500">*</span></label>
+          <label className="block text-xs font-semibold text-slate-700 mb-2">
+            Board title <span className="text-red-500">*</span>
+          </label>
           <Input 
             value={boardTitle}
             onChange={(e) => setBoardTitle(e.target.value)}
             placeholder="e.g. Marketing Campaign" 
             autoFocus 
             required 
-            disabled={isSubmitting} // Disable while submitting
+            disabled={isSubmitting}
           />
         </div>
+
+        {errorMessage && (
+          <p className="text-xs text-red-600 font-medium">{errorMessage}</p>
+        )}
 
         <Button 
           variant="primary" 
           className="w-full" 
-          disabled={!boardTitle.trim() || isSubmitting}
+          disabled={!boardTitle.trim() || !targetWorkspaceId || isSubmitting}
           onClick={handleCreateBoard}
         >
           {isSubmitting ? "Creating..." : "Create Board"}

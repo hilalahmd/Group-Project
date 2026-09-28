@@ -50,7 +50,7 @@ export const getWorkspaceBoards = async (req: Request, res: Response) => {
 
         const boards = await prisma.board.findMany({
             where: {
-                workspaceId: BigInt(workspaceId),
+                workspaceId: BigInt(workspaceId as string),
                 archivedAt: null // Delete/Archive cheyyatha boards mathram edukkunnu
             },
             orderBy: {
@@ -71,7 +71,7 @@ export const getBoardById = async (req: Request, res: Response) => {
         const { id } = req.params;
 
         const board = await prisma.board.findUnique({
-            where: { id: BigInt(id) },
+            where: { id: BigInt(id as string) },
             include: {
                 members: {
                     include: { user: true }
