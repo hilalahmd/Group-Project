@@ -13,40 +13,35 @@ import { CreateBoardModal } from "@/components/ui/create-board-modal";
 import { CreateWorkspaceModal } from "@/components/ui/create-workspace-modal";
 import { authClient } from "@/lib/auth-client";
 
+import { LogoutModal } from "../../components/ui/logout-modal";
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
   const [isCreateBoardOpen, setIsCreateBoardOpen] = React.useState(false);
   const [isCreateWorkspaceOpen, setIsCreateWorkspaceOpen] = React.useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = React.useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
   const { data: session } = authClient.useSession();
   
-  const defaultUser = MOCK_USERS[0] || { name: "User", email: "user@example.com", initials: "U" };
-  const currentUser = {
-    name: session?.user?.name || defaultUser.name,
-    email: session?.user?.email || defaultUser.email,
-    initials: session?.user?.name
-      ? session.user.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
-      : defaultUser.initials,
-  };
+  const isLoggedIn = Boolean(session?.user);
+  const userImage = session?.user?.image || undefined;
+  const userName = session?.user?.name || "User";
+  const userEmail = session?.user?.email || "";
+  const userInitials = session?.user?.name
+    ? session.user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : session?.user?.email
+    ? session.user.email.slice(0, 2).toUpperCase()
+    : "U";
+
   const currentWorkspace = MOCK_WORKSPACES[0] || { id: "1", name: "Workspace", slug: "workspace" };
   const favoriteBoards = (MOCK_BOARDS || []).filter(b => b && b.isFavorite);
-
-  const handleLogout = async () => {
-    try {
-      await authClient.signOut({
-        fetchOptions: {
-          onSuccess: () => {
-            router.push("/login");
-          }
-        }
-      });
-    } catch (err) {
-      console.error("Logout error:", err);
-      router.push("/login");
-    }
-  };
 
   return (
     <div className="flex h-screen w-full bg-slate-50 text-slate-900 font-sans overflow-hidden">
@@ -131,34 +126,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </div>
             </>
           )}
-        </div>
-
-        {/* User Menu */}
-        <div className="p-4 border-t border-slate-100 bg-slate-50/50">
-          <Dropdown
-            trigger={
-              <div className={cn("flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded-lg border border-transparent hover:border-slate-200 hover:shadow-sm -mx-2 transition-all duration-200", !isSidebarOpen && "justify-center mx-0")}>
-                <Avatar initials={currentUser.initials} size="sm" className="ring-2 ring-white shadow-sm" />
-                {isSidebarOpen && (
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-900 truncate">{currentUser.name}</p>
-                    <p className="text-xs text-slate-500 truncate">{currentUser.email}</p>
-                  </div>
-                )}
-              </div>
-            }
-          >
-            <Link href="/profile" className="px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 cursor-pointer flex items-center gap-2">
-              <UserIcon size={16} /> Profile & Settings
-            </Link>
-            <div className="border-t border-slate-100 my-1" />
-            <div 
-              onClick={handleLogout}
-              className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer"
-            >
-              Log out
-            </div>
-          </Dropdown>
         </div>
       </aside>
 
@@ -256,7 +223,39 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <Users size={16} className="text-slate-400" /> Create Workspace
               </div>
             </Dropdown>
-            
+
+            {/* Topbar User Profile Dropdown Icon */}
+            {isLoggedIn ? (
+              <Dropdown
+                trigger={
+                  <button className="flex items-center gap-2 p-0.5 rounded-full hover:ring-2 hover:ring-slate-300 transition-all focus:outline-none" aria-label="User menu">
+                    <Avatar src={userImage} initials={userInitials} size="sm" className="ring-2 ring-white shadow-xs" />
+                  </button>
+                }
+              >
+                <div className="px-4 py-3 border-b border-slate-100">
+                  <p className="text-sm font-semibold text-slate-900 truncate">{userName}</p>
+                  <p className="text-xs text-slate-500 truncate">{userEmail}</p>
+                </div>
+                <Link href="/profile" className="px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 cursor-pointer flex items-center gap-2 font-medium">
+                  <UserIcon size={16} /> Profile & Settings
+                </Link>
+                <div className="border-t border-slate-100 my-1" />
+                <div 
+                  onClick={() => setIsLogoutModalOpen(true)}
+                  className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer font-medium"
+                >
+                  Log out
+                </div>
+              </Dropdown>
+            ) : (
+              <Link href="/login">
+                <Button variant="outline" size="sm">
+                  Log in
+                </Button>
+              </Link>
+            )}
+
           </div>
         </header>
 
@@ -267,8 +266,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </main>
 
       {/* Global Modals */}
-      <CreateBoardModal isOpen={isCreateBoardOpen} onClose={() => setIsCreateBoardOpen(false)} />
+      <CreateBoardModal isOpen={isCreateBoardOpen} onClose={() => setIsCreateBoardOpen(false)} workspaceId={currentWorkspace.id} />
       <CreateWorkspaceModal isOpen={isCreateWorkspaceOpen} onClose={() => setIsCreateWorkspaceOpen(false)} />
+      <LogoutModal isOpen={isLogoutModalOpen} onClose={() => setIsLogoutModalOpen(false)} mode="single" />
     </div>
   );
 }
