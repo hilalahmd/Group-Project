@@ -73,6 +73,8 @@ apps/
           migration.sql
         20260915062223_optional_fields/
           migration.sql
+        20260922094057_/
+          migration.sql
         migration_lock.toml
       schema.prisma
       seed.ts
@@ -81,9 +83,15 @@ apps/
         auth/
           auth.config.ts
           auth.middleware.ts
+        boards/
+          boards.controller.ts
+          boards.route.ts
         users/
           user.controller.ts
           user.routes.ts
+        workspaces/
+          workspaces.controller.ts
+          workspaces.route.ts
       app.ts
       server.ts
     .env.example
@@ -1379,6 +1387,12 @@ ALTER TABLE "users" ALTER COLUMN "username" DROP NOT NULL,
 ALTER COLUMN "display_name" DROP NOT NULL;
 </file>
 
+<file path="apps/api/prisma/migrations/20260922094057_/migration.sql">
+-- AlterTable
+ALTER TABLE "boards" ADD COLUMN     "background" JSONB,
+ADD COLUMN     "is_favorite" BOOLEAN NOT NULL DEFAULT false;
+</file>
+
 <file path="apps/api/prisma/seed.ts">
 import { PrismaClient } from '@prisma/client';
 
@@ -1764,6 +1778,90 @@ const router = Router();
 router.get("/profile", requireAuth, getProfile);
 router.put("/profile", requireAuth, updateProfile);
 router.put("/profile/password", requireAuth, changePassword);
+
+export default router;
+</file>
+
+<file path="apps/api/src/modules/workspaces/workspaces.controller.ts">
+import { Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
+
+// Create a new workspace
+export const createWorkspace = async (req: Request, res: Response) => {
+    try {
+        // auth.middleware vazhi varunna user-ne edukkunnu
+        const user = res.locals.user;
+        const { name } = req.body;
+
+        if (!name) {
+            res.status(400).json({ message: "Workspace name is required" });
+            return;
+        }
+
+        // Trello pole URL-il varan vendi oru 'slug' undakkunnu (eg: my-workspace-1234)
+        const slug = name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
+
+        // Database-il puthiya workspace undakkunnu, koode aaranu create cheythathu pulliye 'owner' aayi add cheyyunnu
+        const workspace = await prisma.workspace.create({
+            data: {
+                name,
+                slug,
+                ownerId: user.id,
+                members: {
+                    create: {
+                        userId: user.id,
+                        role: 'owner'
+                    }
+                }
+            }
+        });
+
+        res.status(201).json(workspace);
+    } catch (error) {
+        console.error("Create Workspace Error:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
+// Get all workspaces for the logged in user
+export const getUserWorkspaces = async (req: Request, res: Response) => {
+    try {
+        const user = res.locals.user;
+
+        // Login cheytha aal member aayittulla ella workspaces-um database-il ninnu edukkunnu
+        const workspaces = await prisma.workspace.findMany({
+            where: {
+                members: {
+                    some: {
+                        userId: user.id
+                    }
+                }
+            },
+            include: {
+                members: true
+            }
+        });
+
+        res.status(200).json(workspaces);
+    } catch (error) {
+        console.error("Get Workspaces Error:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+</file>
+
+<file path="apps/api/src/modules/workspaces/workspaces.route.ts">
+import { Router } from "express";
+import { requireAuth } from "../auth/auth.middleware.js";
+import { createWorkspace, getUserWorkspaces } from "./workspaces.controller.js";
+
+const router = Router();
+
+// Ee routes access cheyyan user login cheythittundavanam (requireAuth)
+router.post("/", requireAuth, createWorkspace);
+router.get("/", requireAuth, getUserWorkspaces);
 
 export default router;
 </file>
@@ -3629,170 +3727,6 @@ CardContent.displayName = "CardContent";
 export { Card, CardHeader, CardTitle, CardContent };
 </file>
 
-<file path="apps/web/components/ui/create-board-modal.tsx">
-import * as React from "react";
-import { Modal } from "./modal";
-import { Button } from "./button";
-import { Input } from "./input";
-import { Layout } from "lucide-react";
-
-interface CreateBoardModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-const THEMES = [
-  { type: "color", value: "bg-blue-600", label: "Blue" },
-  { type: "color", value: "bg-orange-500", label: "Orange" },
-  { type: "color", value: "bg-emerald-600", label: "Green" },
-  { type: "color", value: "bg-red-600", label: "Red" },
-  { type: "color", value: "bg-purple-600", label: "Purple" },
-  { type: "color", value: "bg-pink-600", label: "Pink" },
-  { type: "image", value: "https://images.unsplash.com/photo-1518098268026-4e89f1a2cd8e?q=80&w=200&auto=format&fit=crop", label: "Mountains" },
-  { type: "image", value: "https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?q=80&w=200&auto=format&fit=crop", label: "Nature" },
-  { type: "image", value: "https://images.unsplash.com/photo-1490730141103-6cac27aaab94?q=80&w=200&auto=format&fit=crop", label: "Ocean" },
-];
-
-export function CreateBoardModal({ isOpen, onClose }: CreateBoardModalProps) {
-  const [selectedTheme, setSelectedTheme] = React.useState(THEMES[0]);
-  const [boardTitle, setBoardTitle] = React.useState("");
-
-  if (!isOpen) return null;
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} className="max-w-md p-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
-          <Layout size={20} />
-        </div>
-        <div>
-          <h2 className="text-lg font-bold text-slate-900">Create board</h2>
-          <p className="text-xs text-slate-500">A board is made up of cards ordered on lists.</p>
-        </div>
-      </div>
-
-      <div className="space-y-6">
-        <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-2">Background</label>
-          <div className="grid grid-cols-5 gap-2">
-            {THEMES.map((theme, i) => (
-              <button
-                key={i}
-                onClick={() => setSelectedTheme(theme)}
-                className={`w-full aspect-video rounded-md overflow-hidden flex items-center justify-center relative hover:opacity-90 transition-opacity ${
-                  selectedTheme === theme ? "ring-2 ring-slate-900 ring-offset-1" : ""
-                } ${theme.type === "color" ? theme.value : ""}`}
-                style={theme.type === "image" ? { backgroundImage: `url(${theme.value})`, backgroundSize: "cover", backgroundPosition: "center" } : {}}
-              >
-                {selectedTheme === theme && (
-                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-2">Board title <span className="text-red-500">*</span></label>
-          <Input 
-            value={boardTitle}
-            onChange={(e) => setBoardTitle(e.target.value)}
-            placeholder="e.g. Marketing Campaign" 
-            autoFocus 
-            required 
-          />
-        </div>
-
-        <Button 
-          variant="primary" 
-          className="w-full" 
-          disabled={!boardTitle.trim()}
-          onClick={() => {
-            // Mock submission
-            onClose();
-          }}
-        >
-          Create Board
-        </Button>
-      </div>
-    </Modal>
-  );
-}
-</file>
-
-<file path="apps/web/components/ui/create-workspace-modal.tsx">
-import * as React from "react";
-import { Modal } from "./modal";
-import { Button } from "./button";
-import { Input } from "./input";
-import { Users } from "lucide-react";
-
-interface CreateWorkspaceModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-export function CreateWorkspaceModal({ isOpen, onClose }: CreateWorkspaceModalProps) {
-  const [workspaceName, setWorkspaceName] = React.useState("");
-
-  if (!isOpen) return null;
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} className="max-w-md p-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
-          <Users size={20} />
-        </div>
-        <div>
-          <h2 className="text-lg font-bold text-slate-900">Let's build a Workspace</h2>
-          <p className="text-xs text-slate-500">Boost your productivity by making it easier for everyone to access boards in one location.</p>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1.5">Workspace name</label>
-          <Input 
-            value={workspaceName}
-            onChange={(e) => setWorkspaceName(e.target.value)}
-            placeholder="Taco's Co." 
-            autoFocus 
-          />
-          <p className="text-xs text-slate-500 mt-1">This is the name of your company, team or organization.</p>
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1.5">Workspace type</label>
-          <select className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-            <option>Choose...</option>
-            <option>Engineering-IT</option>
-            <option>Marketing</option>
-            <option>Operations</option>
-            <option>Sales/CRM</option>
-          </select>
-        </div>
-
-        <Button 
-          variant="primary" 
-          className="w-full mt-4" 
-          disabled={!workspaceName.trim()}
-          onClick={() => {
-            // Mock submission
-            onClose();
-          }}
-        >
-          Continue
-        </Button>
-      </div>
-    </Modal>
-  );
-}
-</file>
-
 <file path="apps/web/components/ui/dropdown.tsx">
 import * as React from "react";
 import { cn } from "../../lib/utils";
@@ -4467,6 +4401,129 @@ export default config;
 
 </file>
 
+<file path="apps/api/src/modules/boards/boards.controller.ts">
+import { Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
+
+// Puthiya board undakkan
+export const createBoard = async (req: Request, res: Response) => {
+    try {
+        const user = res.locals.user;
+        console.log("DEBUG: received req.body in createBoard:", req.body);
+        const { workspaceId, name, visibility, background } = req.body;
+
+        if (!workspaceId || !name || !visibility) {
+            console.log("DEBUG: validation failed. workspaceId:", workspaceId, "name:", name, "visibility:", visibility);
+            res.status(400).json({ message: "WorkspaceId, name, and visibility are required" });
+            return;
+        }
+
+        const slug = name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
+
+        // Database-il board save cheyyunnu (Koode nammal puthiyathayi add cheytha background-um)
+        const board = await prisma.board.create({
+            data: {
+                workspaceId: BigInt(workspaceId),
+                name,
+                slug,
+                visibility,
+                background, 
+                createdById: user.id,
+                members: {
+                    create: {
+                        userId: user.id,
+                        role: 'admin'
+                    }
+                }
+            }
+        });
+
+        res.status(201).json(board);
+    } catch (error) {
+        console.error("Create Board Error:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
+// Oru workspace-il ulla ella boards-um edukkan
+export const getWorkspaceBoards = async (req: Request, res: Response) => {
+    try {
+        const { workspaceId } = req.params;
+
+        const boards = await prisma.board.findMany({
+            where: {
+                workspaceId: BigInt(workspaceId),
+                archivedAt: null // Delete/Archive cheyyatha boards mathram edukkunnu
+            },
+            orderBy: {
+                updatedAt: 'desc' // Ettavum latest aayi use cheythathu aadyam varan
+            }
+        });
+
+        res.status(200).json(boards);
+    } catch (error) {
+        console.error("Get Boards Error:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
+// Oru prathyeka board edukkan (with lists and cards)
+export const getBoardById = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        const board = await prisma.board.findUnique({
+            where: { id: BigInt(id) },
+            include: {
+                members: {
+                    include: { user: true }
+                },
+                lists: {
+                    where: { archivedAt: null },
+                    orderBy: { position: 'asc' },
+                    include: {
+                        cards: {
+                            where: { archivedAt: null },
+                            orderBy: { position: 'asc' },
+                            include: {
+                                members: { include: { user: true } }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        if (!board) {
+            res.status(404).json({ message: "Board not found" });
+            return;
+        }
+
+        res.status(200).json(board);
+    } catch (error) {
+        console.error("Get Board Error:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+</file>
+
+<file path="apps/api/src/modules/boards/boards.route.ts">
+import { Router } from "express";
+import { requireAuth } from "../auth/auth.middleware.js";
+import { createBoard, getWorkspaceBoards, getBoardById } from "./boards.controller.js";
+
+const router = Router();
+
+// Routes
+router.post("/", requireAuth, createBoard);
+router.get("/workspace/:workspaceId", requireAuth, getWorkspaceBoards);
+router.get("/:id", requireAuth, getBoardById);
+
+export default router;
+</file>
+
 <file path="apps/web/app/(app)/settings/page.tsx">
 import * as React from "react";
 import { User, Lock, Mail, Camera } from "lucide-react";
@@ -4756,20 +4813,226 @@ export default function ForgotPasswordPage(): React.JSX.Element {
 
 </file>
 
-<file path="apps/web/lib/api.ts">
-import axios from 'axios';
+<file path="apps/web/components/ui/create-board-modal.tsx">
+import * as React from "react";
+import { Modal } from "./modal";
+import { Button } from "./button";
+import { Input } from "./input";
+import { Layout } from "lucide-react";
+import api from "@/lib/api";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+interface CreateBoardModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  workspaceId: string; // Required: To know which workspace to save the board in
+  onSuccess?: () => void; // Optional: To tell the parent component to refresh data
+}
 
-export const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  withCredentials: true,
-});
+const THEMES = [
+  { type: "color", value: "bg-blue-600", label: "Blue" },
+  { type: "color", value: "bg-orange-500", label: "Orange" },
+  { type: "color", value: "bg-emerald-600", label: "Green" },
+  { type: "color", value: "bg-red-600", label: "Red" },
+  { type: "color", value: "bg-purple-600", label: "Purple" },
+  { type: "color", value: "bg-pink-600", label: "Pink" },
+  { type: "image", value: "https://images.unsplash.com/photo-1518098268026-4e89f1a2cd8e?q=80&w=200&auto=format&fit=crop", label: "Mountains" },
+  { type: "image", value: "https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?q=80&w=200&auto=format&fit=crop", label: "Nature" },
+  { type: "image", value: "https://images.unsplash.com/photo-1490730141103-6cac27aaab94?q=80&w=200&auto=format&fit=crop", label: "Ocean" },
+];
 
-export default api;
+export function CreateBoardModal({ isOpen, onClose, workspaceId, onSuccess }: CreateBoardModalProps) {
+  const [selectedTheme, setSelectedTheme] = React.useState(THEMES[0]);
+  const [boardTitle, setBoardTitle] = React.useState("");
+  const [isSubmitting, setIsSubmitting] = React.useState(false); // Track loading state
+
+  // Reset form when modal opens/closes
+  React.useEffect(() => {
+    if (isOpen) {
+      setBoardTitle("");
+      setSelectedTheme(THEMES[0]);
+      setIsSubmitting(false);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  // Professional API submission handler
+  const handleCreateBoard = async () => {
+    if (!boardTitle.trim()) return;
+    
+    try {
+      setIsSubmitting(true);
+      
+      // Call our backend API
+      await api.post('/api/boards', {
+        workspaceId,
+        name: boardTitle,
+        visibility: 'workspace', // Default visibility
+        background: selectedTheme, // Store the selected theme object directly
+      });
+
+      // Call onSuccess to trigger a re-fetch in the Dashboard
+      if (onSuccess) {
+        onSuccess();
+      }
+      
+      onClose(); // Close the modal
+    } catch (error) {
+      console.error("Failed to create board:", error);
+      // In a real app, you might show a toast notification here
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} className="max-w-md p-6">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
+          <Layout size={20} />
+        </div>
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">Create board</h2>
+          <p className="text-xs text-slate-500">A board is made up of cards ordered on lists.</p>
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 mb-2">Background</label>
+          <div className="grid grid-cols-5 gap-2">
+            {THEMES.map((theme, i) => (
+              <button
+                key={i}
+                onClick={() => setSelectedTheme(theme)}
+                disabled={isSubmitting} // Disable while submitting
+                className={`w-full aspect-video rounded-md overflow-hidden flex items-center justify-center relative hover:opacity-90 transition-opacity ${
+                  selectedTheme === theme ? "ring-2 ring-slate-900 ring-offset-1" : ""
+                } ${theme.type === "color" ? theme.value : ""}`}
+                style={theme.type === "image" ? { backgroundImage: `url(${theme.value})`, backgroundSize: "cover", backgroundPosition: "center" } : {}}
+              >
+                {selectedTheme === theme && (
+                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 mb-2">Board title <span className="text-red-500">*</span></label>
+          <Input 
+            value={boardTitle}
+            onChange={(e) => setBoardTitle(e.target.value)}
+            placeholder="e.g. Marketing Campaign" 
+            autoFocus 
+            required 
+            disabled={isSubmitting} // Disable while submitting
+          />
+        </div>
+
+        <Button 
+          variant="primary" 
+          className="w-full" 
+          disabled={!boardTitle.trim() || isSubmitting}
+          onClick={handleCreateBoard}
+        >
+          {isSubmitting ? "Creating..." : "Create Board"}
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+</file>
+
+<file path="apps/web/components/ui/create-workspace-modal.tsx">
+import * as React from "react";
+import { Modal } from "./modal";
+import { Button } from "./button";
+import { Input } from "./input";
+import { Users } from "lucide-react";
+import api from "@/lib/api";
+
+interface CreateWorkspaceModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function CreateWorkspaceModal({ isOpen, onClose }: CreateWorkspaceModalProps) {
+  const [workspaceName, setWorkspaceName] = React.useState("");
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  if (!isOpen) return null;
+
+  const handleCreateWorkspace = async () => {
+    if (!workspaceName.trim()) return;
+
+    try {
+      setIsSubmitting(true);
+      await api.post('/api/workspaces', { name: workspaceName });
+      
+      // Page refresh cheythaal puthiya workspace dashboard-il kaanam
+      window.location.reload(); 
+    } catch (error) {
+      console.error("Failed to create workspace:", error);
+    } finally {
+      setIsSubmitting(false);
+      onClose();
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} className="max-w-md p-6">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
+          <Users size={20} />
+        </div>
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">Let's build a Workspace</h2>
+          <p className="text-xs text-slate-500">Boost your productivity by making it easier for everyone to access boards in one location.</p>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 mb-1.5">Workspace name</label>
+          <Input 
+            value={workspaceName}
+            onChange={(e) => setWorkspaceName(e.target.value)}
+            placeholder="Taco's Co." 
+            autoFocus 
+            disabled={isSubmitting}
+          />
+          <p className="text-xs text-slate-500 mt-1">This is the name of your company, team or organization.</p>
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 mb-1.5">Workspace type</label>
+          <select disabled={isSubmitting} className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+            <option>Choose...</option>
+            <option>Engineering-IT</option>
+            <option>Marketing</option>
+            <option>Operations</option>
+            <option>Sales/CRM</option>
+          </select>
+        </div>
+
+        <Button 
+          variant="primary" 
+          className="w-full mt-4" 
+          disabled={!workspaceName.trim() || isSubmitting}
+          onClick={handleCreateWorkspace}
+        >
+          {isSubmitting ? "Creating..." : "Continue"}
+        </Button>
+      </div>
+    </Modal>
+  );
+}
 </file>
 
 <file path="apps/web/.gitignore">
@@ -5054,7 +5317,7 @@ Learn more about the power of Turborepo:
 <file path="turbo.json">
 {
   "$schema": "https://turborepo.dev/schema.json",
-  "ui": "tui",
+  "ui": "stream",
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -5136,145 +5399,6 @@ startServer();
     "forceConsistentCasingInFileNames": true
   },
   "include": ["src/**/*"]
-}
-</file>
-
-<file path="apps/web/app/(app)/dashboard/page.tsx">
-import * as React from "react";
-import Link from "next/link";
-import { Layout, Clock, Star, Users } from "lucide-react";
-import { MOCK_WORKSPACES, MOCK_BOARDS } from "@/lib/mock-data";
-import { cn } from "@/lib/utils";
-
-export default function DashboardPage() {
-  const recentBoards = MOCK_BOARDS.slice(0, 3);
-  const favoriteBoards = MOCK_BOARDS.filter((b) => b.isFavorite);
-
-  return (
-    <div className="p-8 max-w-5xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">Welcome back!</h1>
-        <p className="text-slate-500">Here's what's happening across your workspaces.</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Main Content (2/3 width) */}
-        <div className="md:col-span-2 space-y-10">
-          
-          {/* Favorite Boards */}
-          {favoriteBoards.length > 0 && (
-            <section>
-              <div className="flex items-center gap-2 mb-4 text-slate-700">
-                <Star size={20} className="text-slate-400" />
-                <h2 className="text-lg font-bold text-slate-800 tracking-tight">Favorites</h2>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {favoriteBoards.map((board) => {
-                  const workspace = MOCK_WORKSPACES.find(w => w.id === board.workspaceId);
-                  
-                  const bgStyle = board.background?.type === 'image'
-                    ? { backgroundImage: `url(${board.background.value})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-                    : board.background?.type === 'color'
-                    ? undefined
-                    : { backgroundColor: '#f1f5f9' };
-
-                  const bgClass = board.background?.type === 'color' ? board.background.value : "";
-
-                  return (
-                    <Link key={board.id} href={`/w/${workspace?.slug}/b/${board.id}`}>
-                      <div 
-                        className={cn("h-28 rounded-xl relative overflow-hidden group shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5", bgClass)}
-                        style={bgStyle}
-                      >
-                        {/* Overlay */}
-                        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors" />
-                        
-                        <div className="absolute inset-0 p-4 flex flex-col justify-between">
-                          <div className="font-bold text-white text-base drop-shadow-sm line-clamp-2">{board.title}</div>
-                          <div className="text-xs text-white/80 font-medium drop-shadow-sm">{workspace?.name}</div>
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            </section>
-          )}
-
-          {/* Recent Boards */}
-          <section>
-            <div className="flex items-center gap-2 mb-4 text-slate-700">
-              <Clock size={20} className="text-slate-400" />
-              <h2 className="text-lg font-bold text-slate-800 tracking-tight">Recently Viewed</h2>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {recentBoards.map((board) => {
-                const workspace = MOCK_WORKSPACES.find(w => w.id === board.workspaceId);
-                
-                const bgStyle = board.background?.type === 'image'
-                  ? { backgroundImage: `url(${board.background.value})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-                  : board.background?.type === 'color'
-                  ? undefined
-                  : { backgroundColor: '#f1f5f9' };
-
-                const bgClass = board.background?.type === 'color' ? board.background.value : "";
-
-                return (
-                  <Link key={board.id} href={`/w/${workspace?.slug}/b/${board.id}`}>
-                    <div 
-                      className={cn("h-28 rounded-xl relative overflow-hidden group shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5", bgClass)}
-                      style={bgStyle}
-                    >
-                      {/* Overlay */}
-                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors" />
-                      
-                      <div className="absolute inset-0 p-4 flex flex-col justify-between">
-                        <div className="font-bold text-white text-base drop-shadow-sm line-clamp-2">{board.title}</div>
-                        <div className="text-xs text-white/80 font-medium drop-shadow-sm">{workspace?.name}</div>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-        </div>
-
-        {/* Sidebar / Workspaces (1/3 width) */}
-        <div className="space-y-6">
-          <section>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2 text-slate-700">
-                <Users size={20} className="text-slate-400" />
-                <h2 className="text-lg font-bold text-slate-800 tracking-tight">Your Workspaces</h2>
-              </div>
-            </div>
-            <div className="space-y-3">
-              {MOCK_WORKSPACES.map((workspace) => (
-                <div key={workspace.id} className="rounded-xl border border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm transition-all duration-200 overflow-hidden">
-                  <div className="p-4 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 text-white flex items-center justify-center font-bold text-lg shadow-sm">
-                      {workspace.name.charAt(0)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-slate-900 truncate">{workspace.name}</h3>
-                      <p className="text-xs text-slate-500 font-medium">{workspace.members.length} members</p>
-                    </div>
-                  </div>
-                  <div className="px-4 py-2 bg-slate-50 border-t border-slate-100">
-                     <Link href={`/w/${workspace.slug}`} className="block text-center py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm">
-                       Open Workspace
-                     </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-
-      </div>
-    </div>
-  );
 }
 </file>
 
@@ -5808,6 +5932,23 @@ export function CardDetailModal({ isOpen, onClose, card }: CardDetailModalProps)
 }
 </file>
 
+<file path="apps/web/lib/api.ts">
+import axios from 'axios';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+export const api = axios.create({
+  baseURL: API_URL,
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  withCredentials: true,
+});
+
+export default api;
+</file>
+
 <file path="apps/web/lib/mock-data.ts">
 export type Label = {
   id: string;
@@ -6062,6 +6203,121 @@ yarn-error.log*
 !.vscode/settings.json.template
 </file>
 
+<file path="apps/web/app/globals.css">
+@import "tailwindcss";
+</file>
+
+<file path="apps/web/app/page.tsx">
+import Link from 'next/link';
+import { Button } from "../components/ui/button";
+
+export default function Home() {
+  return (
+    <div className="min-h-screen flex flex-col justify-between bg-slate-50 text-slate-900 font-sans selection:bg-slate-200">
+      <header className="border-b border-slate-200 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="bg-slate-900 text-white rounded-lg w-8 h-8 flex items-center justify-center font-bold text-sm">
+              T
+            </div>
+            <h1 className="text-xl font-bold tracking-tight text-slate-900">Taskio</h1>
+          </div>
+          <nav className="flex items-center gap-4">
+            <Link
+              href="/login"
+              className="text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+            >
+              Sign In
+            </Link>
+            <Link href="/register">
+              <Button variant="primary" className="rounded-full px-5">Get Started</Button>
+            </Link>
+          </nav>
+        </div>
+      </header>
+
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 flex flex-col justify-center items-center text-center">
+        <section className="max-w-3xl space-y-8">
+          <div className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
+            <span className="flex h-2 w-2 rounded-full bg-red-600 mr-2"></span> Project management, refined.
+          </div>
+          <h2 className="text-5xl font-extrabold tracking-tight text-slate-900 sm:text-7xl leading-tight">
+            Streamline your team&apos;s workflow.
+          </h2>
+          <p className="text-xl text-slate-500 max-w-2xl mx-auto leading-relaxed">
+            Manage projects, track tasks, and collaborate seamlessly with custom boards and clear timelines. No clutter. Just focus.
+          </p>
+          <div className="flex justify-center gap-4 pt-4">
+            <Link href="/register">
+              <Button variant="primary" size="lg" className="rounded-full px-8 text-base">
+                Start Free Trial
+              </Button>
+            </Link>
+            <Link href="/login">
+               <Button variant="outline" size="lg" className="rounded-full px-8 text-base font-semibold">
+                Sign In
+              </Button>
+            </Link>
+          </div>
+        </section>
+      </main>
+
+      <footer className="border-t border-slate-200 bg-white py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm text-slate-400 font-medium">
+          <p>&copy; {new Date().getFullYear()} Taskio. All rights reserved.</p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+</file>
+
+<file path="apps/web/package.json">
+{
+  "name": "web",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint --max-warnings 0",
+    "check-types": "next typegen && tsc --noEmit"
+  },
+  "dependencies": {
+    "@hello-pangea/dnd": "^18.0.1",
+    "@repo/ui": "*",
+    "axios": "^1.20.0",
+    "better-auth": "^1.7.5",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.47.0",
+    "next": "16.3.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "tailwind-merge": "^3.7.0"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "*",
+    "@repo/typescript-config": "*",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "26.4.1",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.5",
+    "eslint": "10.9.1",
+    "typescript": "7.0.2"
+  }
+}
+</file>
+
+<file path="apps/web/postcss.config.js">
+export default {
+  plugins: {
+    '@tailwindcss/postcss': {},
+  },
+}
+</file>
+
 <file path="apps/api/prisma/schema.prisma">
 generator client {
   provider        = "prisma-client-js"
@@ -6138,6 +6394,7 @@ model WorkspaceMember {
 // 4. Boards
 
 model Board {
+
   id          BigInt    @id @default(autoincrement())
   workspaceId BigInt    @map("workspace_id")
   name        String
@@ -6148,6 +6405,8 @@ model Board {
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   archivedAt  DateTime? @map("archived_at") @db.Timestamptz
+  isFavorite  Boolean   @default(false) @map("is_favorite")
+  background  Json?     // Storing { type: 'color'|'image', value: '...' }
 
   workspace Workspace     @relation(fields: [workspaceId], references: [id])
   creator   User          @relation("BoardCreator", fields: [createdById], references: [id])
@@ -6274,6 +6533,215 @@ model Verification {
 }
 </file>
 
+<file path="apps/web/app/(app)/dashboard/page.tsx">
+"use client";
+
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { Clock, Star, Users, Plus } from "lucide-react";
+import api from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { CreateBoardModal } from "@/components/ui/create-board-modal";
+
+export default function DashboardPage() {
+  const [workspaces, setWorkspaces] = useState<any[]>([]);
+  const [boards, setBoards] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isBoardModalOpen, setIsBoardModalOpen] = useState(false);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      // 1. Aadyam User-nte Workspaces edukkunnu
+      const wsRes = await api.get("/api/workspaces");
+      const userWorkspaces = wsRes.data;
+      setWorkspaces(userWorkspaces);
+
+      // 2. Ennittu oro workspace-ilum ulla Boards edukkunnu
+      let allBoards: any[] = [];
+      for (const ws of userWorkspaces) {
+         const boardRes = await api.get(`/api/boards/workspace/${ws.id}`);
+         // UI-il kanikkan vendi board-nte koode workspace details koodi add cheyyunnu
+         const mappedBoards = boardRes.data.map((b: any) => ({ 
+             ...b, 
+             workspaceName: ws.name, 
+             workspaceSlug: ws.slug 
+         }));
+         allBoards.push(...mappedBoards);
+      }
+      setBoards(allBoards);
+      
+    } catch (err) {
+      console.error("Failed to fetch dashboard data:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Component load aavumbo thanne database-il ninnu data fetch cheyyan
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  if (loading) {
+      return (
+        <div className="flex h-64 items-center justify-center">
+            <p className="text-slate-500 font-medium animate-pulse">Loading your dashboard...</p>
+        </div>
+      );
+  }
+
+  const recentBoards = boards.slice(0, 3);
+  const favoriteBoards = boards.filter((b) => b.isFavorite);
+
+  return (
+    <div className="p-8 max-w-5xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">Welcome back!</h1>
+        <p className="text-slate-500">Here's what's happening across your workspaces.</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Main Content (2/3 width) */}
+        <div className="md:col-span-2 space-y-10">
+          
+          {/* Favorite Boards */}
+          {favoriteBoards.length > 0 && (
+            <section>
+              <div className="flex items-center gap-2 mb-4 text-slate-700">
+                <Star size={20} className="text-slate-400" />
+                <h2 className="text-lg font-bold text-slate-800 tracking-tight">Favorites</h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {favoriteBoards.map((board) => {
+                  const bgStyle = board.background?.type === 'image'
+                    ? { backgroundImage: `url(${board.background.value})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+                    : board.background?.type === 'color'
+                    ? undefined
+                    : { backgroundColor: '#f1f5f9' };
+
+                  const bgClass = board.background?.type === 'color' ? board.background.value : "";
+
+                  return (
+                    <Link key={board.id} href={`/w/${board.workspaceSlug}/b/${board.id}`}>
+                      <div 
+                        className={cn("h-28 rounded-xl relative overflow-hidden group shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5", bgClass)}
+                        style={bgStyle}
+                      >
+                        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors" />
+                        <div className="absolute inset-0 p-4 flex flex-col justify-between">
+                          <div className="font-bold text-white text-base drop-shadow-sm line-clamp-2">{board.name}</div>
+                          <div className="text-xs text-white/80 font-medium drop-shadow-sm">{board.workspaceName}</div>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Recent Boards */}
+          {boards.length > 0 ? (
+            <section>
+                <div className="flex items-center gap-2 mb-4 text-slate-700">
+                <Clock size={20} className="text-slate-400" />
+                <h2 className="text-lg font-bold text-slate-800 tracking-tight">Recently Viewed</h2>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {recentBoards.map((board) => {
+                    const bgStyle = board.background?.type === 'image'
+                    ? { backgroundImage: `url(${board.background.value})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+                    : board.background?.type === 'color'
+                    ? undefined
+                    : { backgroundColor: '#f1f5f9' };
+
+                    const bgClass = board.background?.type === 'color' ? board.background.value : "";
+
+                    return (
+                    <Link key={board.id} href={`/w/${board.workspaceSlug}/b/${board.id}`}>
+                        <div 
+                        className={cn("h-28 rounded-xl relative overflow-hidden group shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5", bgClass)}
+                        style={bgStyle}
+                        >
+                        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors" />
+                        <div className="absolute inset-0 p-4 flex flex-col justify-between">
+                            <div className="font-bold text-white text-base drop-shadow-sm line-clamp-2">{board.name}</div>
+                            <div className="text-xs text-white/80 font-medium drop-shadow-sm">{board.workspaceName}</div>
+                        </div>
+                        </div>
+                    </Link>
+                    );
+                })}
+                </div>
+            </section>
+          ) : (
+             <div className="p-8 border-2 border-dashed border-slate-200 rounded-xl text-center bg-slate-50">
+                 <p className="text-slate-500 font-medium">You don't have any boards yet.</p>
+             </div>
+          )}
+        </div>
+
+        {/* Sidebar / Workspaces (1/3 width) */}
+        <div className="space-y-6">
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2 text-slate-700">
+                <Users size={20} className="text-slate-400" />
+                <h2 className="text-lg font-bold text-slate-800 tracking-tight">Your Workspaces</h2>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              {workspaces.length === 0 ? (
+                 <p className="text-sm text-slate-500">No workspaces found.</p>
+              ) : (
+                workspaces.map((workspace) => (
+                    <div key={workspace.id} className="rounded-xl border border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm transition-all duration-200 overflow-hidden">
+                    <div className="p-4 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+                        {workspace.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-slate-900 truncate">{workspace.name}</h3>
+                        <p className="text-xs text-slate-500 font-medium">{workspace.members?.length || 1} members</p>
+                        </div>
+                    </div>
+                    <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex gap-2">
+                        <Link href={`/w/${workspace.slug}`} className="flex-1 text-center py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm">
+                        Open Workspace
+                        </Link>
+                        <button 
+                          onClick={() => {
+                            setSelectedWorkspaceId(workspace.id);
+                            setIsBoardModalOpen(true);
+                          }}
+                          className="flex items-center justify-center px-3 py-1.5 text-xs font-semibold text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors shadow-sm"
+                        >
+                          <Plus size={14} className="mr-1" /> Board
+                        </button>
+                    </div>
+                    </div>
+                ))
+              )}
+            </div>
+          </section>
+        </div>
+
+      </div>
+      
+      <CreateBoardModal 
+        isOpen={isBoardModalOpen} 
+        onClose={() => setIsBoardModalOpen(false)} 
+        workspaceId={selectedWorkspaceId} 
+        onSuccess={fetchDashboardData} 
+      />
+    </div>
+  );
+}
+</file>
+
 <file path="apps/web/app/(app)/w/[workspaceSlug]/b/[boardId]/page.tsx">
 "use client";
 
@@ -6289,6 +6757,7 @@ import { CardDetailModal } from "@/components/ui/card-detail-modal";
 import { CardFace } from "@/components/ui/card-face";
 import { InviteMemberModal } from "@/components/ui/invite-member-modal";
 import { cn } from "@/lib/utils";
+import api from "@/lib/api";
 
 // --- Main Page Component ---
 
@@ -6296,13 +6765,61 @@ export default function BoardPage() {
   const params = useParams();
   const boardId = params.boardId as string;
   
-  // Find initial board data
-  const initialBoard = MOCK_BOARDS.find(b => b.id === boardId);
-
-  // Local React State for the Board (Drag and Drop + Add operations)
-  const [board, setBoard] = React.useState(initialBoard);
+  const [board, setBoard] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(true);
+  
   const [isAddingList, setIsAddingList] = React.useState(false);
   const [newListTitle, setNewListTitle] = React.useState("");
+
+  React.useEffect(() => {
+    const fetchBoard = async () => {
+      try {
+        setLoading(true);
+        const res = await api.get(`/api/boards/${boardId}`);
+        const boardData = res.data;
+        
+        // Map DB fields to UI expected fields
+        boardData.title = boardData.name;
+        
+        if (boardData.members) {
+          boardData.members = boardData.members.map((m: any) => ({
+            ...m,
+            id: m.user?.id || m.userId,
+            name: m.user?.name || 'Unknown',
+            initials: m.user?.name ? m.user.name.charAt(0).toUpperCase() : 'U'
+          }));
+        } else {
+          boardData.members = [];
+        }
+
+        if (boardData.lists) {
+          boardData.lists = boardData.lists.map((l: any) => ({
+            ...l,
+            title: l.name,
+            cards: l.cards ? l.cards.map((c: any) => ({
+              ...c,
+              labels: c.labels || [],
+              assignees: c.assignees || [],
+              checklists: c.checklists || [],
+              comments: c.comments || [],
+              attachments: c.attachments || []
+            })) : []
+          }));
+        } else {
+          boardData.lists = [];
+        }
+
+        setBoard(boardData);
+      } catch (error) {
+        console.error("Failed to fetch board:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (boardId) {
+      fetchBoard();
+    }
+  }, [boardId]);
   
   const [addingCardToListId, setAddingCardToListId] = React.useState<string | null>(null);
   const [newCardTitle, setNewCardTitle] = React.useState("");
@@ -6328,6 +6845,14 @@ export default function BoardPage() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center bg-slate-50">
+        <p className="text-slate-500 font-medium animate-pulse">Loading board...</p>
+      </div>
+    );
+  }
 
   if (!board) {
     return (
@@ -6770,121 +7295,6 @@ export default function BoardPage() {
 }
 </file>
 
-<file path="apps/web/app/globals.css">
-@import "tailwindcss";
-</file>
-
-<file path="apps/web/app/page.tsx">
-import Link from 'next/link';
-import { Button } from "../components/ui/button";
-
-export default function Home() {
-  return (
-    <div className="min-h-screen flex flex-col justify-between bg-slate-50 text-slate-900 font-sans selection:bg-slate-200">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-slate-900 text-white rounded-lg w-8 h-8 flex items-center justify-center font-bold text-sm">
-              T
-            </div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-900">Taskio</h1>
-          </div>
-          <nav className="flex items-center gap-4">
-            <Link
-              href="/login"
-              className="text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors"
-            >
-              Sign In
-            </Link>
-            <Link href="/register">
-              <Button variant="primary" className="rounded-full px-5">Get Started</Button>
-            </Link>
-          </nav>
-        </div>
-      </header>
-
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 flex flex-col justify-center items-center text-center">
-        <section className="max-w-3xl space-y-8">
-          <div className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
-            <span className="flex h-2 w-2 rounded-full bg-red-600 mr-2"></span> Project management, refined.
-          </div>
-          <h2 className="text-5xl font-extrabold tracking-tight text-slate-900 sm:text-7xl leading-tight">
-            Streamline your team&apos;s workflow.
-          </h2>
-          <p className="text-xl text-slate-500 max-w-2xl mx-auto leading-relaxed">
-            Manage projects, track tasks, and collaborate seamlessly with custom boards and clear timelines. No clutter. Just focus.
-          </p>
-          <div className="flex justify-center gap-4 pt-4">
-            <Link href="/register">
-              <Button variant="primary" size="lg" className="rounded-full px-8 text-base">
-                Start Free Trial
-              </Button>
-            </Link>
-            <Link href="/login">
-               <Button variant="outline" size="lg" className="rounded-full px-8 text-base font-semibold">
-                Sign In
-              </Button>
-            </Link>
-          </div>
-        </section>
-      </main>
-
-      <footer className="border-t border-slate-200 bg-white py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm text-slate-400 font-medium">
-          <p>&copy; {new Date().getFullYear()} Taskio. All rights reserved.</p>
-        </div>
-      </footer>
-    </div>
-  );
-}
-</file>
-
-<file path="apps/web/package.json">
-{
-  "name": "web",
-  "version": "0.1.0",
-  "type": "module",
-  "private": true,
-  "scripts": {
-    "dev": "next dev --port 3000",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint --max-warnings 0",
-    "check-types": "next typegen && tsc --noEmit"
-  },
-  "dependencies": {
-    "@hello-pangea/dnd": "^18.0.1",
-    "@repo/ui": "*",
-    "axios": "^1.20.0",
-    "better-auth": "^1.7.5",
-    "clsx": "^2.1.1",
-    "lucide-react": "^1.47.0",
-    "next": "16.3.4",
-    "react": "19.2.8",
-    "react-dom": "19.2.8",
-    "tailwind-merge": "^3.7.0"
-  },
-  "devDependencies": {
-    "@repo/eslint-config": "*",
-    "@repo/typescript-config": "*",
-    "@tailwindcss/postcss": "^4.3.3",
-    "@types/node": "26.4.1",
-    "@types/react": "19.2.18",
-    "@types/react-dom": "19.2.5",
-    "eslint": "10.9.1",
-    "typescript": "7.0.2"
-  }
-}
-</file>
-
-<file path="apps/web/postcss.config.js">
-export default {
-  plugins: {
-    '@tailwindcss/postcss': {},
-  },
-}
-</file>
-
 <file path="apps/api/src/modules/auth/auth.config.ts">
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
@@ -6977,7 +7387,10 @@ import express from "express"
 import cors from 'cors'
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./modules/auth/auth.config.js";
+import workspaceRoutes from "./modules/workspaces/workspaces.route.js";
 import morgan from 'morgan';
+import boardRoutes from "./modules/boards/boards.route.js";
+
 
 
 // Handle BigInt serialization in JSON response
@@ -7006,13 +7419,58 @@ import userRoutes from "./modules/users/user.routes.js";
 
 app.use("/api/auth", toNodeHandler(auth));
 app.use("/api/users", userRoutes);
-
+app.use("/api/workspaces", workspaceRoutes);
+app.use("/api/boards", boardRoutes);
 
 
 
 
 
 export default app;
+</file>
+
+<file path="apps/api/package.json">
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "check-types": "tsc --noEmit",
+    "start": "node dist/server.js",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "bcrypt": "^6.0.0",
+    "better-auth": "^1.7.4",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.12.1",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^26.5.1",
+    "nodemon": "^3.1.14",
+    "prisma": "^5.22.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2"
+  }
+}
 </file>
 
 <file path="apps/web/app/(auth)/login/page.tsx">
@@ -7154,17 +7612,7 @@ export default function Page(): React.JSX.Element {
         </div>
 
         {/* OAuth Buttons */}
-        <div className="grid grid-cols-2 gap-4">
-          <Button 
-            variant="outline" 
-            className="w-full font-semibold text-slate-700"
-            onClick={() => {
-              setLoading(true);
-              setTimeout(() => router.push("/dashboard"), 500);
-            }}
-          >
-            Microsoft
-          </Button>
+        <div className="flex justify-center">
           <Button 
             type="button"
             variant="outline"
@@ -7347,18 +7795,7 @@ export default function Page(): React.JSX.Element {
         </div>
 
         {/* OAuth Buttons */}
-        <div className="grid grid-cols-2 gap-4">
-          <Button 
-            type="button"
-            variant="outline" 
-            className="w-full font-semibold text-slate-700"
-            onClick={() => {
-              setLoading(true);
-              setTimeout(() => router.push("/dashboard"), 500);
-            }}
-          >
-            Microsoft
-          </Button>
+        <div className="flex justify-center">
           <Button 
             type="button"
             variant="outline"
@@ -7388,50 +7825,6 @@ export default function Page(): React.JSX.Element {
       </div>
     </div>
   );
-}
-</file>
-
-<file path="apps/api/package.json">
-{
-  "name": "backend",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "tsc",
-    "check-types": "tsc --noEmit",
-    "start": "node dist/server.js",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "@prisma/client": "^5.22.0",
-    "bcrypt": "^6.0.0",
-    "better-auth": "^1.7.4",
-    "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "jsonwebtoken": "^9.0.3",
-    "morgan": "^1.12.1",
-    "pg": "^8.23.0"
-  },
-  "devDependencies": {
-    "@types/bcrypt": "^6.0.0",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
-    "@types/jsonwebtoken": "^9.0.10",
-    "@types/morgan": "^1.9.10",
-    "@types/node": "^26.5.1",
-    "nodemon": "^3.1.14",
-    "prisma": "^5.22.0",
-    "ts-node": "^10.9.2",
-    "tsx": "^4.23.13",
-    "typescript": "^7.0.2"
-  }
 }
 </file>
 
